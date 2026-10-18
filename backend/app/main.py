@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+from io import BytesIO
+import json
+from pathlib import Path
+import shutil
+from typing import Literal
+
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+import nibabel as nib
+import numpy as np
+
+from .config import settings
+from .imaging import (ImagingError, label_measurements, label_mesh, load_nifti, orientation_labels,
+                      render_slice, validate_mask)
+from .store import SessionData, store
+
+app = FastAPI(title="NeuroVista API", version="0.1.0", description="Local-only MRI research workspace")
+app.add_middleware(CORSMiddleware, allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
+
+
+def fail(status: int, message: str) -> None:
+    raise HTTPException(status_code=status, detail=message)
+
+
+def require_scan(session_id: str) -> SessionData:
+    try:
+        session = store.get(session_id)
+    except KeyError:
+        fail(404, "Session not found or already cleared.")
+    if session.scan is None or session.scan_img is None or session.metadata is None:
+        fail(409, "Upload a scan first.")
+    return session
+
+
+async def save_upload(file: UploadFile, target: Path) -> None:
+    name = file.filename or ""
+    if not (name.lower().endswith(".nii") or name.lower().endswith(".nii.gz")):
+        fail(415, "Only .nii and .nii.gz files are accepted.")
+    size = 0
+    try:
+        with target.open("wb") as output:
+            while chunk := await file.read(1024 * 1024):
+                size += len(chunk)
+                if size > settings.max_upload_bytes:
+                    fail(413, "Upload exceeds the configured size limit.")
+                output.write(chunk)
+    finally:
+        await file.close()
+
+
+@app.exception_handler(ImagingError)
+async def imaging_error_handler(_request, exc: ImagingError):
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.get("/api/health")
+def health() -> dict:
+    return {"status": "ok", "service": "NeuroVista", "storage": "temporary local files", "ai": "not_connected"}
+
+
+@app.post("/api/sessions")
+def new_session() -> dict:
+    session = store.create()
+    return {"session_id": session.id}
+
+
+@app.delete("/api/sessions/{session_id}")
+def clear_session(session_id: str) -> dict:
+    return {"cleared": store.delete(session_id)}
+
+
+@app.post("/api/sessions/{session_id}/scan")
+async def upload_scan(session_id: str, file: UploadFile = File(...)) -> dict:
+    try:
+        session = store.get(session_id)
+    except KeyError:
+        fail(404, "Session not found.")
+    suffix = ".nii.gz" if (file.filename or "").lower().endswith(".nii.gz") else ".nii"
+    target = session.directory / f"scan{suffix}"
+    await save_upload(file, target)
+    image, data, metadata = load_nifti(target, settings.max_decompressed_bytes)
+    session.scan_img, session.scan, session.metadata = image, data, metadata
+    session.scan_name, session.synthetic = file.filename, False
+    session.mask_img = session.mask = None
+    session.labels = []
+    return scan_payload(session)
+
+
+@app.post("/api/sessions/{session_id}/mask")
+async def upload_mask(session_id: str, kind: Literal["reference", "annotation"] = Form(...), file: UploadFile = File(...)) -> dict:
+    session = require_scan(session_id)
+    suffix = ".nii.gz" if (file.filename or "").lower().endswith(".nii.gz") else ".nii"
+    target = session.directory / f"mask{suffix}"
+    await save_upload(file, target)
+    image, data, _metadata = load_nifti(target, settings.max_decompressed_bytes)
+    labels = validate_mask(session.scan_img, session.scan, image, data)
+    session.mask_img, session.mask = image, np.rint(data).astype(np.int32)
+    session.mask_name, session.mask_kind, session.labels = file.filename, kind, labels
+    return mask_payload(session)
+
+
+@app.post("/api/sessions/{session_id}/synthetic")
+def synthetic_sample(session_id: str) -> dict:
+    try:
+        session = store.get(session_id)
+    except KeyError:
+        fail(404, "Session not found.")
+    shape = (128, 144, 112)
+    grid = np.indices(shape, dtype=np.float32)
+    center = np.asarray(shape, dtype=np.float32)[:, None, None, None] / 2
+    scaled = (grid - center) / np.asarray([45, 55, 43], dtype=np.float32)[:, None, None, None]
+    brain = np.exp(-np.sum(scaled**2, axis=0) * 2.1)
+    anatomy = 0.7 + 0.18 * np.sin(grid[0] / 7) + 0.12 * np.cos(grid[1] / 9)
+    data = (brain * anatomy * 900).astype(np.float32)
+    lesion1 = ((grid[0] - 78) / 13) ** 2 + ((grid[1] - 73) / 16) ** 2 + ((grid[2] - 62) / 11) ** 2 < 1
+    lesion2 = ((grid[0] - 78) / 7) ** 2 + ((grid[1] - 73) / 9) ** 2 + ((grid[2] - 62) / 6) ** 2 < 1
+    mask = np.zeros(shape, dtype=np.int16)
+    mask[lesion1] = 1
+    mask[lesion2] = 2
+    affine = np.diag([1.0, 1.0, 1.2, 1.0])
+    scan_img, mask_img = nib.Nifti1Image(data, affine), nib.Nifti1Image(mask, affine)
+    scan_img.header.set_xyzt_units("mm")
+    mask_img.header.set_xyzt_units("mm")
+    scan_path, mask_path = session.directory / "synthetic_scan.nii.gz", session.directory / "synthetic_mask.nii.gz"
+    nib.save(scan_img, scan_path)
+    nib.save(mask_img, mask_path)
+    scan_img, data, metadata = load_nifti(scan_path, settings.max_decompressed_bytes)
+    mask_img, mask, _ = load_nifti(mask_path, settings.max_decompressed_bytes)
+    session.scan_img, session.scan, session.metadata = scan_img, data, metadata
+    session.scan_name, session.synthetic = "NeuroVista synthetic demonstration", True
+    session.mask_img, session.mask = mask_img, mask.astype(np.int32)
+    session.mask_name, session.mask_kind, session.labels = "Synthetic reference regions", "reference", [1, 2]
+    return {"scan": scan_payload(session), "mask": mask_payload(session)}
+
+
+def scan_payload(session: SessionData) -> dict:
+    assert session.metadata is not None
+    return {"session_id": session.id, "name": session.scan_name, "synthetic": session.synthetic,
+            "metadata": session.metadata.as_dict(),
+            "orientation_labels": {p: orientation_labels(session.metadata, p) for p in ("axial", "coronal", "sagittal")}}
+
+
+def mask_payload(session: SessionData) -> dict:
+    assert session.mask is not None and session.metadata is not None
+    return {"name": session.mask_name, "kind": session.mask_kind, "labels": session.labels,
+            "measurements": label_measurements(session.mask, np.asarray(session.metadata.affine), session.metadata.units)}
+
+
+@app.get("/api/sessions/{session_id}/slice/{plane}/{index}")
+def get_slice(session_id: str, plane: Literal["axial", "coronal", "sagittal"], index: int,
+              window: float = Query(..., gt=0), level: float = Query(...), opacity: float = Query(0.5, ge=0, le=1),
+              labels: str = Query("")) -> Response:
+    session = require_scan(session_id)
+    selected = {int(v) for v in labels.split(",") if v.strip().isdigit()}
+    image = render_slice(session.scan, session.mask, plane, index, window, level, opacity, selected)
+    buffer = BytesIO()
+    image.save(buffer, "PNG", optimize=True)
+    return Response(buffer.getvalue(), media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/sessions/{session_id}/mesh/{label}")
+def get_mesh(session_id: str, label: int) -> dict:
+    session = require_scan(session_id)
+    if session.mask is None:
+        fail(409, "Upload a compatible segmentation mask first.")
+    if label not in session.labels:
+        fail(404, "Mask label not found.")
+    return label_mesh(session.mask, label, session.metadata.spacing)
+
+
+@app.get("/api/sessions/{session_id}/export")
+def export_results(session_id: str) -> Response:
+    session = require_scan(session_id)
+    payload = {
+        "application": "NeuroVista", "application_version": app.version,
+        "notice": "Research and education only — not for clinical diagnosis",
+        "processing": {"location": "local FastAPI service", "resampling": False, "ai_model": None},
+        "scan": scan_payload(session), "mask": mask_payload(session) if session.mask is not None else None,
+    }
+    return Response(json.dumps(payload, indent=2), media_type="application/json",
+                    headers={"Content-Disposition": 'attachment; filename="neurovista-results.json"'})
+
+
+@app.get("/api/ai/status")
+def ai_status() -> dict:
+    return {"connected": False, "status": "AI model not connected", "device": None,
+            "reason": "Stage 1 is active. Compatible weights and the four required MRI sequences have not been configured."}
+
+
+# A production frontend build can be served by the same localhost-only process.
+frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+
+
