@@ -15,7 +15,7 @@ export async function uploadScan(id: string, file: File) {
   const body = new FormData(); body.append('file', file)
   return checked<Scan>(await fetch(`/api/sessions/${id}/scan`, { method: 'POST', body }))
 }
-export async function uploadMask(id: string, file: File, kind: 'reference' | 'annotation') {
+export async function uploadMask(id: string, file: File, kind: 'reference' | 'annotation' | 'prediction') {
   const body = new FormData(); body.append('file', file); body.append('kind', kind)
   return checked<Mask>(await fetch(`/api/sessions/${id}/mask`, { method: 'POST', body }))
 }

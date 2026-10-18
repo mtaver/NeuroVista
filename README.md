@@ -9,6 +9,7 @@ NeuroVista is a local-first research and education workspace for inspecting 3D N
 - orientation labels derived from the NIfTI affine
 - slice, window, level, zoom, and reset controls
 - reference-mask or user-annotation upload with strict dimension, affine, and label validation
+- imported AI-prediction masks with visually distinct provenance labelling
 - label overlays, opacity and per-region visibility controls
 - region volume in mL calculated from the affine determinant when spatial units are known
 - interactive 3D mask surfaces
@@ -103,6 +104,7 @@ frontend/src/      React/TypeScript workspace
 DATA_SOURCES.md    official sample-data acquisition and licensing
 MODEL_CARD.md      planned model integration facts and blockers
 CLOUD_INFERENCE.md assessed local-viewer/cloud-GPU workflow (not provisioned)
+notebooks/         Colab preparation for real MONAI BraTS inference
 IMPLEMENTATION_STATUS.md verified scope and limitations
 ```
 
@@ -111,4 +113,17 @@ IMPLEMENTATION_STATUS.md verified scope and limitations
 See [DATA_SOURCES.md](DATA_SOURCES.md) for the official Medical Segmentation Decathlon source. Do not commit downloaded MRI archives. See [MODEL_CARD.md](MODEL_CARD.md) for the researched MONAI bundle; model execution remains a Stage 2 task.
 
 See [CLOUD_INFERENCE.md](CLOUD_INFERENCE.md) for a privacy-gated cloud-GPU design assessment. It does not enable inference or authorize upload of scan data.
+
+## Prepared Colab inference workflow
+
+[NeuroVista_MONAI_BraTS_Colab.ipynb](notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb) prepares a real, checksum-verified MONAI BraTS v0.5.4 inference run on an explicitly selected Google Colab GPU runtime. Opening or running the notebook is a separate cloud-processing decision: its upload cell transfers the selected T1c, T1, T2 and FLAIR files to Google Colab. Use only authorized, de-identified research data and review the notebook warnings first.
+
+GPU inference has **not** been executed or verified as part of this repository. Until a compatible run completes and its exported geometry is validated, the local application remains **AI model not connected**.
+
+After a successful notebook run, extract `neurovista_prediction_package.zip`. In the local viewer:
+
+1. Upload the exact T1c reference scan used by the notebook.
+2. Select **AI prediction import** under mask provenance.
+3. Upload `neurovista_ai_prediction.nii.gz`.
+4. Keep and review `neurovista_ai_prediction_provenance.json`; the viewer validates mask geometry but does not independently attest that the cloud inference was valid.
 

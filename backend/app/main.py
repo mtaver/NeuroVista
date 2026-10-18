@@ -91,7 +91,7 @@ async def upload_scan(session_id: str, file: UploadFile = File(...)) -> dict:
 
 
 @app.post("/api/sessions/{session_id}/mask")
-async def upload_mask(session_id: str, kind: Literal["reference", "annotation"] = Form(...), file: UploadFile = File(...)) -> dict:
+async def upload_mask(session_id: str, kind: Literal["reference", "annotation", "prediction"] = Form(...), file: UploadFile = File(...)) -> dict:
     session = require_scan(session_id)
     suffix = ".nii.gz" if (file.filename or "").lower().endswith(".nii.gz") else ".nii"
     target = session.directory / f"mask{suffix}"

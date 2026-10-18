@@ -3,7 +3,9 @@ from io import BytesIO
 from fastapi import HTTPException, UploadFile
 import pytest
 
-from app.main import get_slice, new_session, synthetic_sample, upload_scan
+from typing import get_args, get_origin, get_type_hints
+
+from app.main import get_slice, new_session, synthetic_sample, upload_mask, upload_scan
 
 
 def test_invalid_upload_extension():
@@ -23,4 +25,10 @@ def test_synthetic_main_workflow():
     assert response.status_code == 200
     assert response.media_type == "image/png"
     assert len(response.body) > 100
+
+
+def test_prediction_provenance_is_accepted_for_compatible_mask():
+    annotation = get_type_hints(upload_mask)["kind"]
+    assert get_origin(annotation) is not None
+    assert "prediction" in get_args(annotation)
 

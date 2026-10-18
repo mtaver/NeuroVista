@@ -4,6 +4,8 @@
 
 This is a design assessment, not an implementation. NeuroVista remains **AI model not connected**. No scan was uploaded, no cloud account or endpoint was configured, and no paid resource was provisioned.
 
+An opt-in Colab implementation of the single-job workflow is prepared at `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb`. It does nothing until a user opens and runs it. Its upload cell clearly states that selected files are transferred to Google Colab, and its cleanup cell removes working files from the active runtime before the user disconnects and deletes that runtime. The notebook has not yet completed a real GPU run, so this document does not claim execution success.
+
 The proposed boundary keeps all viewing, mask inspection, measurements, exports, and session management local. A GPU worker would be used only for an explicitly initiated inference job after the user reviews what will be sent and where.
 
 ## Required input contract

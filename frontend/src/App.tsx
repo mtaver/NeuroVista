@@ -23,7 +23,7 @@ export default function App() {
   const [visible, setVisible] = useState<number[]>([])
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
-  const [maskKind, setMaskKind] = useState<'reference' | 'annotation'>('reference')
+  const [maskKind, setMaskKind] = useState<'reference' | 'annotation' | 'prediction'>('reference')
   const [zoom, setZoom] = useState(1)
 
   useEffect(() => { createSession().then(v => setSessionId(v.session_id)).catch(e => setError(e.message)) }, [])
@@ -90,9 +90,9 @@ export default function App() {
             <label>Zoom <output>{zoom.toFixed(1)}×</output><input type="range" min="1" max="2" step="0.1" value={zoom} onChange={e => setZoom(Number(e.target.value))}/></label>
             <button className="text-button" onClick={reset}><RotateCcw size={14}/>Reset view</button>
             <div className="panel-heading compact"><div><span>02</span><h2>Mask</h2></div><Layers3 size={18}/></div>
-            <select value={maskKind} onChange={e => setMaskKind(e.target.value as 'reference'|'annotation')} aria-label="Mask provenance"><option value="reference">Uploaded reference mask</option><option value="annotation">User annotation</option></select>
+            <select value={maskKind} onChange={e => setMaskKind(e.target.value as 'reference'|'annotation'|'prediction')} aria-label="Mask provenance"><option value="reference">Uploaded reference mask</option><option value="annotation">User annotation</option><option value="prediction">AI prediction import</option></select>
             <UploadButton label={mask ? 'Replace mask' : 'Upload corresponding mask'} accept=".nii,.nii.gz" onFile={handleMask}/>
-            {mask && <><div className="provenance">{mask.kind === 'reference' ? 'UPLOADED REFERENCE' : 'USER ANNOTATION'}</div><label>Overlay opacity <output>{Math.round(opacity*100)}%</output><input type="range" min="0" max="1" step="0.05" value={opacity} onChange={e => setOpacity(Number(e.target.value))}/></label><div className="legend">{mask.measurements.map((m, i) => <label key={m.label}><input type="checkbox" checked={visible.includes(m.label)} onChange={() => setVisible(v => v.includes(m.label) ? v.filter(x => x !== m.label) : [...v, m.label])}/><i style={{background: COLORS[i%COLORS.length]}}/><span>Region {m.label}<small>{m.volume_ml.toFixed(2)} mL</small></span></label>)}</div></>}
+            {mask && <><div className={`provenance ${mask.kind}`}>{mask.kind === 'reference' ? 'UPLOADED REFERENCE MASK' : mask.kind === 'annotation' ? 'USER ANNOTATION' : 'AI PREDICTION · IMPORTED'}</div>{mask.kind === 'prediction' && <p className="prediction-note">Generated outside this local viewer. Verify the provenance JSON and geometry before interpretation.</p>}<label>Overlay opacity <output>{Math.round(opacity*100)}%</output><input type="range" min="0" max="1" step="0.05" value={opacity} onChange={e => setOpacity(Number(e.target.value))}/></label><div className="legend">{mask.measurements.map((m, i) => <label key={m.label}><input type="checkbox" checked={visible.includes(m.label)} onChange={() => setVisible(v => v.includes(m.label) ? v.filter(x => x !== m.label) : [...v, m.label])}/><i style={{background: COLORS[i%COLORS.length]}}/><span>Region {m.label}<small>{m.volume_ml.toFixed(2)} mL</small></span></label>)}</div></>}
           </aside>
           <div className="viewer-column" style={{'--zoom': zoom} as CSSProperties}>
             <div className="slice-grid">{(['axial','coronal','sagittal'] as Plane[]).map(plane => <SliceView key={plane} plane={plane} title={plane[0].toUpperCase()+plane.slice(1)} url={urls![plane]} index={position[planeAxis[plane]]} max={scan.metadata.shape[planeAxis[plane]]} labels={scan.orientation_labels[plane]} aspect={aspect(plane)} crosshair={crosshair(plane)} onCrosshair={(x,y) => moveCrosshair(plane,x,y)} onSlice={value => setPosition(v => v.map((n,i) => i === planeAxis[plane] ? value : n) as [number,number,number])}/>)}</div>

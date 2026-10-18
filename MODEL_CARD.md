@@ -57,6 +57,8 @@ This is not an appropriate configuration for responsibly enabling and validating
 
 A possible future GPU-worker design is assessed in `CLOUD_INFERENCE.md`. It is documentation only: no cloud account, endpoint, storage, GPU, model service, or data transfer has been created.
 
+The repository now includes `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` as an executable preparation for a user-initiated Colab run. It pins the documented stack, downloads the versioned official weight, verifies its published SHA-256, validates the four inputs, performs the documented normalization and sliding-window inference, and exports an original-geometry prediction package. **It has not been run on a Colab GPU in this project, so GPU execution remains unverified and the application remains AI model not connected.**
+
 ## Known limitations
 
 - Trained for the BraTS-style four-sequence protocol and labels; performance may not transfer to other acquisition protocols, pathologies, populations, or post-treatment appearances.
