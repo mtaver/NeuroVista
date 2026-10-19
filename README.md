@@ -120,7 +120,7 @@ See [CLOUD_INFERENCE.md](CLOUD_INFERENCE.md) for a privacy-gated cloud-GPU desig
 
 For a beginner-friendly walkthrough using an official MSD/BraTS tumour research case, including download verification, four-channel splitting, execution blockers, cleanup and local import, see [COLAB_BEGINNER_GUIDE.md](COLAB_BEGINNER_GUIDE.md).
 
-One real GPU inference has now completed for the single MSD Task01 `BRATS_457` case and its exported files passed local hash, label and geometry checks. See [BRATS_457_WORKFLOW.md](BRATS_457_WORKFLOW.md) for the measured run and the pending expert-reference comparison. This does not connect a model locally or establish prediction accuracy.
+One real GPU inference has completed for the single MSD Task01 `BRATS_457` case and its exported files passed local hash, label and geometry checks. The corresponding expert comparison produced Dice 0.896640 whole tumour, 0.834695 tumour core and 0.831881 enhancing tumour. See [BRATS_457_WORKFLOW.md](BRATS_457_WORKFLOW.md) for the measured run and limitations. This is a single-case demonstration, does not connect a model locally, and does not establish diagnostic accuracy or independent validation.
 
 After a successful notebook run, extract `neurovista_prediction_package.zip`. In the local viewer:
 

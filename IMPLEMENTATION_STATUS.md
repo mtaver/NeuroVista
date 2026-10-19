@@ -47,7 +47,7 @@ Last updated: 2026-10-20
 - Status shown by the app: **Local inference not connected**; when applicable, **Cloud-generated AI prediction imported**
 - No local model is installed and there is no live Colab connection
 - The local computer still has no CUDA-capable GPU and does not provide local inference
-- A separate local-viewer/cloud-GPU workflow is assessed in `CLOUD_INFERENCE.md`; no data was uploaded and no resource was provisioned
+- A separate local-viewer/cloud-GPU workflow is assessed in `CLOUD_INFERENCE.md`; the recorded BRATS_457 research case was uploaded by the user for the completed Colab run, but no persistent service or paid resource was provisioned
 - Colab notebook prepared for real v0.5.4 inference with pinned dependencies, GPU/RAM checks, official weight checksum verification, four-sequence validation, documented preprocessing, original-geometry NIfTI/JSON export, download packaging, and cleanup instructions
 - Local viewer accepts a geometrically compatible imported mask under the distinct provenance **AI prediction · imported**; reference masks and user annotations remain separate
 - Localhost API verification passed for a geometrically compatible mask uploaded with `kind=prediction`; no data left the computer
@@ -57,8 +57,10 @@ Last updated: 2026-10-20
 - A real Colab run completed for MSD Task01 `BRATS_457` on a Tesla T4 using MONAI model v0.5.4, PyTorch 2.4.0+cu121, MONAI 1.4.0 and NumPy 1.26.4; measured inference time was 1.488733485 seconds and peak allocated GPU memory was 2.760735 GiB
 - The downloaded prediction and T1c hashes matched provenance; their `240 × 240 × 155` RAS, 1 mm geometry matched; labels 0/1/2/4 were accepted; overlays, volumes and all three 3D meshes rendered locally
 - This is a completed cloud-to-local file workflow, not a live service connection and not evidence of prediction accuracy
-- The corresponding expert mask is currently missing locally. The comparison protocol and download-only Colab cell are documented in `BRATS_457_WORKFLOW.md`; Dice values remain pending
-- Any future Dice report is a **single-case comparison**, not independent validation, because subject overlap between the model's reported BraTS 2018 training source and MSD's BraTS 2016/2017-derived case has not been ruled out
+- The matching MSD expert mask was compared after exact shape/affine and label validation. Single-case Dice was **0.896640 whole tumour**, **0.834695 tumour core**, and **0.831881 enhancing tumour**
+- The observed run used a **Tesla T4**, completed model inference in **1.488733485 seconds**, and measured **2.760735 GiB** peak allocated GPU memory
+- These figures are a **single-case technical demonstration**, not diagnostic accuracy, cohort performance, or independent validation; possible subject overlap between the model's reported BraTS 2018 source and the MSD BraTS 2016/2017-derived case remains unresolved
+- The Colab notebook is refactored into prerequisite-checked stages with one explicit restart, complete post-restart initialization, mutually exclusive MSD/upload preparation, checksum-verified cache reuse, strict inference/export state, optional expert comparison, licence-aware result packaging, and confirmation-gated cleanup
 
 ## Stage 3 — planned, not implemented
 

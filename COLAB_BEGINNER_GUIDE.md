@@ -1,121 +1,186 @@
 # Running the NeuroVista MONAI notebook in Google Colab
 
-## What has and has not been verified
+## What this workflow is
 
-The notebook has been checked locally against the versioned MONAI `brats_mri_segmentation` **v0.5.4** bundle. Its architecture, channel order, normalization, inference window, activation, threshold and label conversion match the release configuration. Its Python cells parse locally and the official model weight checksum has been verified.
+The notebook runs MONAI `brats_mri_segmentation` v0.5.4 in a user-controlled Google Colab session and downloads files for NeuroVista. It does not connect Colab to the local application.
 
-This is preparation verification only. A real Colab GPU inference has **not** completed for this project. Do not describe the model as connected or the run as successful unless the inference cell finishes, the export cell finishes, and the downloaded NIfTI reopens with the expected shape and affine.
+- Local application status: **Local inference not connected**.
+- After importing a downloaded mask: **Cloud-generated AI prediction imported**.
+- Uploading data to Colab sends the selected files to Google's cloud environment. Use only de-identified research data you are authorized to process there.
+- The output is research-only and is not a diagnosis.
 
-## Recommended public research case
+The notebook's architecture, channel order, normalization, inference window, activation, threshold and label conversion match the v0.5.4 release. The refactored notebook has passed local JSON and Python syntax checks, but it has **not yet been rerun end-to-end on a GPU**. The earlier BRATS_457 notebook run remains the only completed GPU run recorded by this project.
 
-Use training case `BRATS_457.nii.gz` from **Medical Segmentation Decathlon Task01 — BrainTumour**. This is tumour MRI data derived from BraTS 2016/2017, not the hippocampus case. The official dataset metadata states:
+## Model and environments
 
-- four co-registered channels in one 4D NIfTI: `0=FLAIR`, `1=T1w`, `2=T1gd`, `3=T2w`;
-- 484 training cases with masks and 266 test cases;
-- licence: **CC BY-SA 4.0**;
-- `BRATS_457.nii.gz` is a listed training image with a corresponding expert mask.
+The model uses SegResNet with four inputs in this exact order: **T1c, T1, T2, FLAIR**. It uses nonzero channel-wise normalization, a `240 × 240 × 160` sliding window, batch size 1, overlap 0.5, sigmoid activation and threshold 0.5. Output precedence is enhancing tumour→4, otherwise tumour core→1, otherwise whole-tumour-only→2, otherwise background→0.
 
-No account or registration is required for the MONAI-hosted MSD archive. It is approximately **7.1 GiB**, so check disk space and network allowance first. The archive MD5 published by MONAI 1.4.0 is `240a19d752f0d9e9101544901065d872`.
+The two environments are recorded separately:
 
-1. Download `Task01_BrainTumour.tar` from the official MONAI MSD mirror:
-   `https://msd-for-monai.s3-us-west-2.amazonaws.com/Task01_BrainTumour.tar`
-2. Verify its MD5 in PowerShell:
+| Environment | Important versions |
+|---|---|
+| Original v0.5.4 metadata | PyTorch 2.4.0, MONAI 1.4.0, NumPy 1.24.4, NiBabel 5.2.1 |
+| Adapted Colab Python 3.12 | PyTorch 2.4.0, MONAI 1.4.0, NumPy 1.26.4, NiBabel 5.2.1, torchvision 0.19.0, torchaudio 2.4.0 |
 
-   ```powershell
-   Get-FileHash .\Task01_BrainTumour.tar -Algorithm MD5
-   ```
+NumPy 1.24.4 is incompatible with Python 3.12. The adaptation changes NumPy to 1.26.4 but does not change the model architecture, weights or inference behavior.
 
-3. Extract only the chosen image, its expert mask, and the dataset metadata:
+## Before opening Colab
 
-   ```powershell
-   tar -xf .\Task01_BrainTumour.tar Task01_BrainTumour/imagesTr/BRATS_457.nii.gz Task01_BrainTumour/labelsTr/BRATS_457.nii.gz Task01_BrainTumour/dataset.json
-   ```
+Choose one input path:
 
-4. Keep `dataset.json` with the case so the source, channel definitions and licence remain documented.
-5. From the NeuroVista repository, split the 4D image into four aligned volumes:
+1. **Official MSD demonstration case** — the notebook downloads Medical Segmentation Decathlon Task01 BrainTumour and prepares BRATS_457 automatically.
+2. **User-supplied research case** — supply four already co-registered, 1 mm isotropic NIfTI volumes from the same de-identified case.
 
-   ```powershell
-   .\.venv\Scripts\python.exe .\scripts\prepare_msd_brats_case.py .\Task01_BrainTumour\imagesTr\BRATS_457.nii.gz .\BRATS_457_split
-   ```
+The official MSD archive is approximately **7.61 GB to download**, even though only BRATS_457 is extracted. Its published MD5 is `240a19d752f0d9e9101544901065d872`. The dataset metadata identifies source order `0=FLAIR`, `1=T1`, `2=T1c/T1gd`, `3=T2` and licence **CC BY-SA 4.0**. A verified cached archive is reused instead of downloaded again.
 
-   The outputs are suffixed `_flair`, `_t1`, `_t1c`, and `_t2`. The helper only separates channels and preserves the source affine; it does not register or resample them. Keep the expert mask local unless you later want a separate, clearly labelled reference comparison. The model does not need it for inference.
-
-## Colab steps
+## Exact execution steps
 
 ### 1. Open the notebook
 
-Go to `https://colab.research.google.com/`, choose **File → Upload notebook**, and select `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` from this repository. Uploading the notebook itself does not upload an MRI.
+1. Go to `https://colab.research.google.com/`.
+2. Select **File → Upload notebook**.
+3. Choose `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` from this repository.
 
-### 2. Select and check a GPU
+Uploading the notebook does not upload MRI data.
 
-Choose **Runtime → Change runtime type → Hardware accelerator → GPU**, then save. Colab free-tier GPU availability is not guaranteed and the GPU model can vary.
+### 2. Select a GPU runtime
 
-Python 3.12.13 and a Tesla T4 have now been observed in the intended Colab session. That confirms the selected runtime identity only; it does not verify inference, memory sufficiency, output validity or model performance.
+Choose **Runtime → Change runtime type → Hardware accelerator → GPU**, then save. Free GPU availability and GPU model are controlled by Colab. This guide does not require purchasing or provisioning a paid resource.
 
-Run the installation cell, then the hardware-check cell. Continue only if it prints `"cuda_available": true`. Record the displayed GPU name, VRAM and available RAM. If it raises “A CUDA GPU runtime is required,” use **Runtime → Disconnect and delete runtime** and try later; do not purchase or provision anything for this guide.
+Run Stage 1. Expected output includes:
 
-### 3. Install the pinned dependencies
+- Python `3.12.x`;
+- the current process ID;
+- available `/content` disk space.
 
-Run the first code cell. It first requires Python 3.12 and then installs the adapted pinned stack. The original bundle metadata used NumPy 1.24.4; the Colab adaptation uses NumPy 1.26.4 because it supplies Python 3.12 wheels. PyTorch 2.4.0, MONAI 1.4.0, the model architecture, weights and inference behavior remain unchanged. Matching torchvision 0.19.0 and torchaudio 2.4.0 prevent mismatches with Colab's preinstalled PyTorch family.
+If Python is not 3.12, start a fresh compatible runtime. If the official dataset path will be used, ensure at least 9 GiB is free.
 
-After installation, choose **Runtime → Restart session**, then run the hardware/version-check cell. It rejects any package-version mismatch before weights or data are used. This is a pinned Python 3.12 adaptation of the v0.5.4 inference environment, not the bundle's original NumPy-exact environment.
+### 3. Install, then restart exactly once
 
-### 4. Upload only the de-identified case
+Run Stage 2 once. It installs the pinned CUDA 12.1 PyTorch family and the adapted Python 3.12 packages. Both installation commands use failure checking, so `INSTALLATION SUCCEEDED` appears only if both commands succeed.
 
-Run the upload cell and select only these four files from `BRATS_457_split`:
+When it succeeds:
 
-- `BRATS_457_t1c.nii.gz`
-- `BRATS_457_t1.nii.gz`
-- `BRATS_457_t2.nii.gz`
-- `BRATS_457_flair.nii.gz`
+1. Choose **Runtime → Restart session**.
+2. Do not rerun Stage 2.
+3. Continue with Stage 3.
 
-This transfers those files to Google's Colab environment. Do not upload names, IDs, dates of birth, clinical documents, DICOM headers, or identifiable data. The MSD case is distributed as research data under its stated licence, but you must still follow your institution's policy and Google's current terms.
+Stage 3 compares the current process with the installer process. If you forgot to restart, it stops and tells you to restart. Expected successful output lists the original environment, adapted environment, RAM, GPU, VRAM and CUDA build. Continue only if `cuda_available` is true.
 
-Edit the `INPUTS` cell so each key points to the matching `/content/...` filename. Do not use the MSD source channel order directly: the model order is fixed as **T1c, T1, T2, FLAIR**. Run the validation cell. It must report four channels, matching shapes and affines, millimetre units and approximately 1 mm isotropic spacing.
+### 4. Download verified model weights
 
-### 5. Run real inference
+Run Stage 4. Expected output includes:
 
-Run the weight-download cell. It must print version `0.5.4` and SHA-256 `860ccb3f1c21c99d0410ad8a1ac4ef6b8fab60cec0a503b0ba42675741a750ae`.
+- model version `0.5.4`;
+- source `MONAI/brats_mri_segmentation`;
+- SHA-256 `860ccb3f1c21c99d0410ad8a1ac4ef6b8fab60cec0a503b0ba42675741a750ae`;
+- the cache path.
 
-Then run the inference cell. This is the first actual GPU execution. It uses the release's SegResNet, a `240×240×160` sliding window, batch size 1, overlap 0.5, sigmoid activation and threshold 0.5. If it reports CUDA out of memory, the precise blocker is insufficient GPU VRAM for this release-exact inference window. Do not claim success and do not alter the window while describing the result as exact v0.5.4 execution.
+The weight is reused from cache and verified every time. A checksum mismatch stops the workflow.
 
-### 6. Export and download results
+### 5. Choose exactly one data path
 
-Run the export cell only after inference finishes. It applies the release's exact precedence:
+In Stage 5, set `DATA_SOURCE` to either `msd_demo` or `upload`. Do not run both preparation cells.
 
-- enhancing tumour channel → label `4`;
-- otherwise tumour core channel → label `1`;
-- otherwise whole tumour channel → label `2`;
-- otherwise background → label `0`.
+#### Official BRATS_457 path
 
-The browser should download `neurovista_prediction_package.zip`, containing:
+Leave `DATA_SOURCE='msd_demo'` and run Stage 5A.
+
+The cell:
+
+1. checks free disk space;
+2. reuses a valid cached archive or downloads it once with progress;
+3. verifies the official MD5;
+4. safely extracts only the BRATS_457 4D image, expert mask and `dataset.json`;
+5. splits the source channels into compressed `BRATS_457_flair.nii.gz`, `BRATS_457_t1.nii.gz`, `BRATS_457_t1c.nii.gz` and `BRATS_457_t2.nii.gz`;
+6. creates `INPUTS` in the model's T1c, T1, T2, FLAIR order;
+7. records MSD attribution and CC BY-SA 4.0.
+
+Expected output prints the four exact input paths, reference-mask path, attribution and whether the archive cache was reused.
+
+#### User-supplied path
+
+Set `DATA_SOURCE='upload'`. Fill all four `USER_INPUT_NAMES` and the dataset/source/licence attribution fields. If an expert mask is available, set `USER_REFERENCE_NAME` to its filename. Set `ALLOW_USER_T1C_REDISTRIBUTION_IN_PACKAGE=True` only if you are authorized to include the scan and optional reference in the downloaded ZIP.
+
+Run Stage 5B and select only the de-identified research volumes. It refuses missing names and never replaces a prepared MSD selection with placeholder paths.
+
+### 6. Validate and preprocess
+
+Run Stage 6. It verifies every path, dimensionality, numeric/finite data, affine, 1 mm isotropic spacing, millimetre units, matching shape and matching affine. It does not silently align incompatible scans.
+
+Expected output includes:
+
+- `model_channel_order`: `t1c`, `t1`, `t2`, `flair`;
+- tensor shape `[1, 4, X, Y, Z]`;
+- per-input checksums and geometry.
+
+Any rejection means the inputs must be corrected before inference.
+
+### 7. Run inference
+
+Run Stage 7. This is the actual GPU execution. Expected output includes:
+
+- `inference_complete: true`;
+- elapsed seconds;
+- peak allocated GPU memory;
+- foreground voxel counts for TC, WT and ET.
+
+If this cell fails or the session restarts, no valid in-memory result exists. Rerun the required prior stages; later cells deliberately refuse to fabricate or reconstruct a prediction.
+
+### 8. Export prediction and provenance
+
+Run Stage 8 only after Stage 7 succeeds. Expected output identifies:
+
+- `neurovista_ai_prediction.nii.gz`;
+- prediction SHA-256;
+- `neurovista_ai_prediction_provenance.json`;
+- `geometry_verified: true`.
+
+The provenance records original and adapted environments separately, hardware, input hashes, preprocessing, release-exact inference settings, timing, memory, output labels, dataset attribution and limitations.
+
+### 9. Optionally compare with the reference
+
+Run Stage 9. For the MSD path, it validates reference/prediction geometry and labels before computing whole-tumour, tumour-core and enhancing-tumour Dice. Both-empty regions are reported as not applicable; exactly one empty returns Dice 0.
+
+For user uploads without a reference, the cell prints that comparison was skipped and creates no metrics. It never infers a reference or invents results.
+
+Any comparison is one case only. It is not diagnostic accuracy or independent validation. For BRATS_457, possible overlap with the model's reported BraTS-derived training subjects remains unresolved.
+
+### 10. Package and download
+
+Run Stage 10. The ZIP contains:
 
 - `neurovista_ai_prediction.nii.gz`;
 - `neurovista_ai_prediction_provenance.json`;
+- `DATASET_ATTRIBUTION.json`;
+- matching T1c `.nii.gz` when redistribution is permitted;
+- expert reference `.nii.gz` when present and redistribution is permitted;
+- `expert_comparison.json` when calculated;
 - `README_IMPORT.txt`.
 
-The export cell reopens the mask and verifies its shape and affine against the uploaded T1c reference. Only successful completion of both inference and export constitutes a valid technical run; it is not clinical validation.
+NIfTI files remain compressed. Official MSD files carry dataset attribution and CC BY-SA 4.0 information. User-supplied T1c/reference files are omitted unless redistribution permission is explicitly confirmed.
 
-### 7. Import into local NeuroVista
+Wait for the browser download, then open the ZIP on your computer and confirm its contents before cleanup.
 
-1. Start NeuroVista locally using the repository's README instructions.
-2. Upload `BRATS_457_t1c.nii.gz` as the scan.
-3. In the mask provenance selector, choose **AI prediction import**.
-4. Upload `neurovista_ai_prediction.nii.gz`.
-5. Confirm NeuroVista labels it **AI PREDICTION · IMPORTED**, accepts the geometry, and displays labels `1`, `2`, and/or `4` as present.
-6. Keep the JSON provenance file beside the NIfTI. Do not relabel the prediction as an expert reference.
+### 11. Import locally
 
-The optional `BRATS_457` expert mask uses the MSD source label convention and is not required for this import procedure. A quantitative model evaluation needs an explicitly reviewed label-conversion and metric protocol; visual overlap alone is not a performance claim.
+1. Start the local NeuroVista backend and frontend using the repository README.
+2. Load the matching T1c scan.
+3. Choose **AI prediction import**.
+4. Import `neurovista_ai_prediction.nii.gz`.
+5. Confirm the UI says **Local inference not connected** and **Cloud-generated AI prediction imported**.
+6. Keep the provenance and attribution JSON beside the mask.
 
-## Cleanup
+Importing a file does not create a live Colab connection and does not run inference locally.
 
-After the ZIP is safely downloaded, set `CLEAN_UP_NOW = True` and run the notebook's cleanup cell. Then choose **Runtime → Disconnect and delete runtime**. Deleting runtime files is not a guarantee about infrastructure-level retention; consult Google's current Colab privacy and retention terms.
+### 12. Clean up
 
-## Precise blockers
+Only after the ZIP opens locally, set `DOWNLOAD_CONFIRMED=True` in Stage 11 and run it. Leave `DELETE_VERIFIED_CACHE_TOO=False` if you may need to repackage during this session; this prevents an unnecessary repeated 7.61 GB download. Set it true only when you intentionally want to remove the verified cache.
 
-- **No GPU assigned / `cuda_available` false:** free Colab GPU capacity is unavailable. Try later.
-- **Python check or pinned package installation fails:** the current Colab runtime does not match the verified Python 3.12 adapted stack.
-- **Archive download unavailable or insufficient disk/network:** the official MSD archive is about 7.1 GiB; no smaller official per-case endpoint was verified here.
-- **Validation rejects spacing, shape, affine or units:** the selected files are not a compatible aligned case or were mapped incorrectly.
-- **CUDA out of memory:** the assigned GPU lacks memory for the release-exact inference configuration.
-- **Export geometry check fails:** no valid result package exists; do not import or report success.
+Finally choose **Runtime → Disconnect and delete runtime**. Runtime deletion does not guarantee immediate provider-level erasure; Google's current retention policy applies.
+
+## Completed milestone and remaining verification
+
+The earlier BRATS_457 run completed on a Tesla T4 in 1.488733485 seconds with 2.760735 GiB peak allocated GPU memory. Its local comparison produced Dice 0.896640 whole tumour, 0.834695 tumour core and 0.831881 enhancing tumour. This is a single-case demonstration, not diagnostic accuracy or independent validation; possible training-subject overlap is unresolved.
+
+The refactored notebook still needs one fresh end-to-end Colab GPU run to verify its new control flow, download, packaging and cleanup stages. Local syntax and repository tests do not substitute for that cloud execution.

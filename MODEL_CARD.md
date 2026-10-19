@@ -53,11 +53,11 @@ Hardware observed on the NeuroVista computer on 2026-10-18:
 - NVIDIA/CUDA: **not available** (`nvidia-smi` absent; no NVIDIA adapter detected)
 - PyTorch/MONAI: not installed in the Stage 1 environment
 
-This is not an appropriate configuration for responsibly enabling and validating this 3D BraTS workflow now. CPU execution may technically be possible with sufficient free memory, but no successful real inference has occurred and no compatible four-sequence case has been supplied. NeuroVista therefore remains **AI model not connected**.
+This local computer is not an appropriate configuration for enabling this 3D inference workflow. CPU execution may technically be possible with sufficient free memory, but it has not been validated locally. Real inference instead completed in a user-controlled Colab session using a compatible four-sequence research case. NeuroVista therefore remains **Local inference not connected**.
 
 A possible future GPU-worker design is assessed in `CLOUD_INFERENCE.md`. It is documentation only: no cloud account, endpoint, storage, GPU, model service, or data transfer has been created.
 
-The repository includes `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` for user-initiated Colab execution. A real run completed for MSD Task01 `BRATS_457` on a Tesla T4 and the resulting file package passed local provenance, checksum, label and geometry verification. The local application remains **Local inference not connected** and identifies the result separately as **Cloud-generated AI prediction imported**. Single-case execution is not a performance claim; expert comparison is pending and training-data overlap has not been ruled out.
+The repository includes `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` for user-initiated Colab execution. A real run completed for MSD Task01 `BRATS_457` on a Tesla T4 in 1.488733485 seconds with 2.760735 GiB peak allocated GPU memory. The resulting package passed local provenance, checksum, label and geometry verification. Comparison with the matching expert mask produced Dice 0.896640 whole tumour, 0.834695 tumour core and 0.831881 enhancing tumour. The local application remains **Local inference not connected** and identifies the file separately as **Cloud-generated AI prediction imported**. These are single-case demonstration results, not diagnostic accuracy or independent validation; possible training-subject overlap remains unresolved.
 
 ## Known limitations
 

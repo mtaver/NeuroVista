@@ -31,9 +31,11 @@ The local UI displayed **AI prediction · imported**, visible overlays, and affi
 
 All three surface requests succeeded: label 1 produced 2,056 vertices/4,180 faces; label 2 produced 24,954 vertices/50,040 faces; label 4 produced 2,190 vertices/4,376 faces. These results validate execution, transport, geometry, measurements, overlays and rendering—not medical accuracy.
 
-## Expert-reference comparison protocol
+## Completed expert-reference comparison
 
-The corresponding expert mask is not currently present locally, so Dice results are **pending** and must not be fabricated. MSD Task01 defines reference labels as 0 background, 1 edema, 2 non-enhancing tumour and 3 enhancing tumour. The imported prediction uses 0 background, 1 tumour-core remainder, 2 whole-tumour-only remainder and 4 enhancing tumour.
+The corresponding MSD expert mask was downloaded separately, preserved, copied into ignored `.tmp` storage, and compared with the actual imported file `neurovista_ai_prediction.nii.gz`. The source and copied reference both had SHA-256 `ab30e8774ef7a679531eb95dec3adb8aa9aef0e109c0207eb4d435da184c4249`. Reference and prediction geometry matched at `240 × 240 × 155`, 1 mm isotropic, RAS, with an identity affine.
+
+MSD Task01 defines reference labels as 0 background, 1 edema, 2 non-enhancing tumour and 3 enhancing tumour. The imported prediction uses 0 background, 1 tumour-core remainder, 2 whole-tumour-only remainder and 4 enhancing tumour.
 
 Dice comparison therefore uses these composite regions:
 
@@ -43,7 +45,15 @@ Dice comparison therefore uses these composite regions:
 | Tumour core | 2, 3 | 1, 4 |
 | Enhancing tumour | 3 | 4 |
 
-`scripts/compare_brats_regions.py` rejects unsupported labels or geometry mismatch before calculating Dice. If both masks are empty for a region, Dice is reported as `null` / not applicable. If exactly one is empty, Dice is 0. Otherwise Dice is `2 × intersection / (reference + prediction)`.
+`scripts/compare_brats_regions.py` rejected neither file: all observed labels were supported and geometry matched. If both masks are empty for a region, Dice is reported as `null` / not applicable. If exactly one is empty, Dice is 0. Otherwise Dice is `2 × intersection / (reference + prediction)`.
+
+| Composite region | Reference voxels | Prediction voxels | Intersection | Dice |
+|---|---:|---:|---:|---:|
+| Whole tumour | 73,791 | 83,940 | 70,714 | **0.896640** |
+| Tumour core | 3,265 | 3,468 | 2,810 | **0.834695** |
+| Enhancing tumour | 3,218 | 2,980 | 2,578 | **0.831881** |
+
+All three regions were non-empty, so the ordinary Dice formula applied. These values are a **single-case technical demonstration**. They are not diagnostic accuracy, a clinical-performance estimate, a cohort result, or independent validation.
 
 After the reference mask is downloaded into ignored storage, run:
 
@@ -54,9 +64,9 @@ After the reference mask is downloaded into ignored storage, run:
   --output .\.tmp\prediction-import-BRATS_457\comparison.json
 ```
 
-## Download the already-extracted reference from Colab
+## Reproducing the comparison
 
-This cell downloads only the reference already extracted during the active Colab session. It never downloads the dataset archive again. If the runtime was reset or deleted, it stops with the precise missing-file error.
+The refactored notebook can optionally calculate the same comparison before packaging. For a prior runtime, this cell downloads only an already-extracted reference and never downloads the dataset archive again. If the runtime was reset or deleted, it stops with the precise missing-file error.
 
 ```python
 from pathlib import Path
