@@ -16,7 +16,7 @@ NeuroVista is a local-first research and education workspace for inspecting 3D N
 - local temporary sessions, clear-session control, and JSON research export
 - bundled synthetic workflow labelled **“Synthetic demonstration — not a patient scan”**
 
-AI segmentation is intentionally disabled in Stage 1. The UI reports **“AI model not connected”** and does not generate fake predictions.
+Local AI inference remains disabled. The UI reports **“Local inference not connected”**. When a verified external result file is loaded it separately reports **“Cloud-generated AI prediction imported”**; this does not imply a live Colab connection.
 
 ## Windows prerequisites
 
@@ -118,7 +118,9 @@ See [CLOUD_INFERENCE.md](CLOUD_INFERENCE.md) for a privacy-gated cloud-GPU desig
 
 [NeuroVista_MONAI_BraTS_Colab.ipynb](notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb) prepares a real, checksum-verified MONAI BraTS v0.5.4 inference run on an explicitly selected Google Colab GPU runtime. Opening or running the notebook is a separate cloud-processing decision: its upload cell transfers the selected T1c, T1, T2 and FLAIR files to Google Colab. Use only authorized, de-identified research data and review the notebook warnings first.
 
-GPU inference has **not** been executed or verified as part of this repository. Until a compatible run completes and its exported geometry is validated, the local application remains **AI model not connected**.
+For a beginner-friendly walkthrough using an official MSD/BraTS tumour research case, including download verification, four-channel splitting, execution blockers, cleanup and local import, see [COLAB_BEGINNER_GUIDE.md](COLAB_BEGINNER_GUIDE.md).
+
+One real GPU inference has now completed for the single MSD Task01 `BRATS_457` case and its exported files passed local hash, label and geometry checks. See [BRATS_457_WORKFLOW.md](BRATS_457_WORKFLOW.md) for the measured run and the pending expert-reference comparison. This does not connect a model locally or establish prediction accuracy.
 
 After a successful notebook run, extract `neurovista_prediction_package.zip`. In the local viewer:
 

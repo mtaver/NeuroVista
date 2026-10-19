@@ -2,7 +2,7 @@
 
 ## Connection status
 
-**AI model not connected.** NeuroVista Stage 1 contains no model weights and performs no AI inference. This document records the authoritative candidate researched for Stage 2; it is not a claim that the model is installed or validated in this application.
+**Local inference not connected.** NeuroVista contains no local model weights and performs no local AI inference. A cloud-generated prediction file has been imported and verified for one case; this is not a live Colab connection or a claim of clinical validation.
 
 ## Candidate
 
@@ -57,7 +57,7 @@ This is not an appropriate configuration for responsibly enabling and validating
 
 A possible future GPU-worker design is assessed in `CLOUD_INFERENCE.md`. It is documentation only: no cloud account, endpoint, storage, GPU, model service, or data transfer has been created.
 
-The repository now includes `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` as an executable preparation for a user-initiated Colab run. It pins the documented stack, downloads the versioned official weight, verifies its published SHA-256, validates the four inputs, performs the documented normalization and sliding-window inference, and exports an original-geometry prediction package. **It has not been run on a Colab GPU in this project, so GPU execution remains unverified and the application remains AI model not connected.**
+The repository includes `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` for user-initiated Colab execution. A real run completed for MSD Task01 `BRATS_457` on a Tesla T4 and the resulting file package passed local provenance, checksum, label and geometry verification. The local application remains **Local inference not connected** and identifies the result separately as **Cloud-generated AI prediction imported**. Single-case execution is not a performance claim; expert comparison is pending and training-data overlap has not been ruled out.
 
 ## Known limitations
 

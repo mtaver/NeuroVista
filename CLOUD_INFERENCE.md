@@ -2,9 +2,9 @@
 
 ## Status and boundary
 
-This is a design assessment, not an implementation. NeuroVista remains **AI model not connected**. No scan was uploaded, no cloud account or endpoint was configured, and no paid resource was provisioned.
+NeuroVista remains **Local inference not connected**. One user-initiated Colab run produced files that were downloaded and imported locally as **Cloud-generated AI prediction imported**. There is no live Colab connection, configured endpoint, background synchronization or paid resource provisioned by NeuroVista.
 
-An opt-in Colab implementation of the single-job workflow is prepared at `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb`. It does nothing until a user opens and runs it. Its upload cell clearly states that selected files are transferred to Google Colab, and its cleanup cell removes working files from the active runtime before the user disconnects and deletes that runtime. The notebook has not yet completed a real GPU run, so this document does not claim execution success.
+The opt-in notebook at `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` completed one real `BRATS_457` run. The resulting hashes, geometry, labels, overlays, measurements and 3D meshes were verified locally. This establishes that the file-based workflow executed for that case only; it does not establish accuracy, independence, cohort performance or clinical suitability.
 
 The proposed boundary keeps all viewing, mask inspection, measurements, exports, and session management local. A GPU worker would be used only for an explicitly initiated inference job after the user reviews what will be sent and where.
 
@@ -107,7 +107,7 @@ Cloud inference must remain disabled until all of the following pass:
 - failure, cancellation, timeout and remote-deletion tests
 - local verification of the returned prediction
 
-Until then, the only accurate application state is **AI model not connected**.
+Until a local model is deliberately installed and validated, the accurate application state is **Local inference not connected**. Imported result files must be labelled **Cloud-generated AI prediction imported**, never as a live connection.
 
 ## Technical references
 

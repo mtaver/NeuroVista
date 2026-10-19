@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-10-18
+Last updated: 2026-10-20
 
 ## Stage 1 — implemented
 
@@ -41,19 +41,24 @@ Last updated: 2026-10-18
 - Temporary-session cleanup is explicit. Automatic TTL cleanup is configured conceptually but not yet scheduled; operating-system temporary cleanup remains a fallback.
 - The frontend uses local system fonts and makes no third-party browser requests.
 
-## Stage 2 — preparation implemented; AI not connected
+## Stage 2 — cloud-file workflow verified; local inference not connected
 
 - Candidate: Project MONAI `brats_mri_segmentation` bundle v0.5.4; official 18.8 MB weight availability, SHA-256, Apache-2.0 licence, four-sequence channel order, preprocessing, inference window, and output mapping verified in `MODEL_CARD.md`
-- Status shown by the app: **AI model not connected**
-- No weights, predictions, confidence values, GPU state, performance, or processing-time claims are fabricated
-- Blockers: only 7.78 GiB RAM with 0.98 GiB free at inspection, no CUDA-capable GPU, PyTorch/MONAI not installed, and no compatible co-registered T1c/T1/T2/FLAIR case available for real inference validation
-- Stage 2 was not enabled because real compatible inference has not succeeded
+- Status shown by the app: **Local inference not connected**; when applicable, **Cloud-generated AI prediction imported**
+- No local model is installed and there is no live Colab connection
+- The local computer still has no CUDA-capable GPU and does not provide local inference
 - A separate local-viewer/cloud-GPU workflow is assessed in `CLOUD_INFERENCE.md`; no data was uploaded and no resource was provisioned
 - Colab notebook prepared for real v0.5.4 inference with pinned dependencies, GPU/RAM checks, official weight checksum verification, four-sequence validation, documented preprocessing, original-geometry NIfTI/JSON export, download packaging, and cleanup instructions
 - Local viewer accepts a geometrically compatible imported mask under the distinct provenance **AI prediction · imported**; reference masks and user annotations remain separate
 - Localhost API verification passed for a geometrically compatible mask uploaded with `kind=prediction`; no data left the computer
 - Notebook structure and all Python cells passed local JSON/AST validation; the official v0.5.4 weight download matched the documented SHA-256
-- **GPU execution remains unverified** because the notebook has not been run with a compatible four-sequence case
+- Beginner Colab guide added for official MSD Task01 `BRATS_457`, together with a locally verified helper that splits the dataset's documented FLAIR/T1/T1gd/T2 4D order into four aligned files without resampling
+- Colab environment adapted for Python 3.12: NumPy 1.26.4 replaces the model metadata's incompatible 1.24.4 pin; the notebook records the distinction and rejects Python/package mismatches before inference
+- A real Colab run completed for MSD Task01 `BRATS_457` on a Tesla T4 using MONAI model v0.5.4, PyTorch 2.4.0+cu121, MONAI 1.4.0 and NumPy 1.26.4; measured inference time was 1.488733485 seconds and peak allocated GPU memory was 2.760735 GiB
+- The downloaded prediction and T1c hashes matched provenance; their `240 × 240 × 155` RAS, 1 mm geometry matched; labels 0/1/2/4 were accepted; overlays, volumes and all three 3D meshes rendered locally
+- This is a completed cloud-to-local file workflow, not a live service connection and not evidence of prediction accuracy
+- The corresponding expert mask is currently missing locally. The comparison protocol and download-only Colab cell are documented in `BRATS_457_WORKFLOW.md`; Dice values remain pending
+- Any future Dice report is a **single-case comparison**, not independent validation, because subject overlap between the model's reported BraTS 2018 training source and MSD's BraTS 2016/2017-derived case has not been ruled out
 
 ## Stage 3 — planned, not implemented
 

@@ -102,7 +102,7 @@ export default function App() {
         <section id="results" className="results-row"><div><Database size={20}/><span><b>Research results</b><small>Measurements use affine voxel volume and verified {scan.metadata.units} spatial units.</small></span></div><div><a className="button secondary" href={`/api/sessions/${sessionId}/export`} download><Download size={16}/>Export JSON</a><button className="button danger" onClick={clear}><Eraser size={16}/>Clear session</button></div></section>
       </>}
 
-      <section id="segmentation" className="roadmap"><span className="eyebrow">NEXT STAGE</span><div><h2>AI model not connected</h2><p>NeuroVista will only enable inference after compatible, licensed model weights are installed and all required T1, T1c, T2 and FLAIR sequences pass validation. No prediction is simulated.</p></div><span className="status-pill">PLANNED · STAGE 2</span></section>
+      <section id="segmentation" className="roadmap"><span className="eyebrow">INFERENCE STATUS</span><div><h2>Local inference not connected</h2><p>{mask?.kind === 'prediction' ? 'Cloud-generated AI prediction imported. This is a file import, not a live Colab connection.' : 'NeuroVista does not run a model locally. A compatible prediction can be imported as a file; no prediction is simulated.'}</p></div><span className="status-pill">{mask?.kind === 'prediction' ? 'CLOUD OUTPUT · IMPORTED' : 'LOCAL MODEL · OFF'}</span></section>
     </main>
     <footer id="documentation"><span>NeuroVista 0.1 · Local research workspace</span><span>Uploads: temporary local storage · Setup details are in README.md</span></footer>
   </div>
