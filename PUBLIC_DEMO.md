@@ -4,6 +4,8 @@
 
 The public site is a static, browser-only presentation of the preserved BRATS_457 workflow. It has no Python backend, upload endpoint, inference endpoint, credential, paid resource or server-side storage.
 
+Public URL: https://mtaver.github.io/NeuroVista/
+
 > This demonstration displays a previously generated AI result. It does not automatically analyse new scans.
 
 Working online features:
