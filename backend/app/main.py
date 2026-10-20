@@ -88,6 +88,7 @@ async def upload_scan(session_id: str, file: UploadFile = File(...)) -> dict:
     session.scan_name, session.synthetic = file.filename, False
     session.mask_img = session.mask = None
     session.labels = []
+    session.label_names = {}
     return scan_payload(session)
 
 
@@ -101,6 +102,7 @@ async def upload_mask(session_id: str, kind: Literal["reference", "annotation", 
     labels = validate_mask(session.scan_img, session.scan, image, data)
     session.mask_img, session.mask = image, np.rint(data).astype(np.int32)
     session.mask_name, session.mask_kind, session.labels = file.filename, kind, labels
+    session.label_names = {}
     return mask_payload(session)
 
 
@@ -135,6 +137,7 @@ def synthetic_sample(session_id: str) -> dict:
     session.scan_name, session.synthetic = "NeuroVista synthetic demonstration", True
     session.mask_img, session.mask = mask_img, mask.astype(np.int32)
     session.mask_name, session.mask_kind, session.labels = "Synthetic reference regions", "reference", [1, 2]
+    session.label_names = {}
     return {"scan": scan_payload(session), "mask": mask_payload(session)}
 
 
@@ -148,6 +151,7 @@ def scan_payload(session: SessionData) -> dict:
 def mask_payload(session: SessionData) -> dict:
     assert session.mask is not None and session.metadata is not None
     return {"name": session.mask_name, "kind": session.mask_kind, "labels": session.labels,
+            "label_names": {str(label): session.label_names.get(label, f"Region {label}") for label in session.labels},
             "measurements": label_measurements(session.mask, np.asarray(session.metadata.affine), session.metadata.units)}
 
 
@@ -216,6 +220,11 @@ def verified_demonstration(session_id: str) -> dict:
     session.scan_name, session.synthetic = "BRATS_457 T1c · verified local demonstration", False
     session.mask_img, session.mask = prediction_img, np.rint(prediction).astype(np.int32)
     session.mask_name, session.mask_kind, session.labels = "BRATS_457 AI prediction · imported", "prediction", prediction_labels
+    session.label_names = {
+        1: "Non-enhancing tumour-core region",
+        2: "Whole-tumour-only region",
+        4: "Enhancing tumour",
+    }
     return {
         "scan": scan_payload(session),
         "mask": mask_payload(session),
@@ -254,6 +263,22 @@ def get_mesh(session_id: str, label: int) -> dict:
     if label not in session.labels:
         fail(404, "Mask label not found.")
     return label_mesh(session.mask, label, session.metadata.spacing)
+
+
+@app.get("/api/sessions/{session_id}/mask/foreground-centre")
+def foreground_centre(session_id: str, label: int | None = Query(None, ge=1)) -> dict:
+    session = require_scan(session_id)
+    if session.mask is None:
+        fail(409, "Upload a compatible segmentation mask first.")
+    if label is not None and label not in session.labels:
+        fail(404, "Mask label not found.")
+    foreground = session.mask == label if label is not None else session.mask > 0
+    coordinates = np.argwhere(foreground)
+    if not len(coordinates):
+        fail(422, "The selected mask region is empty.")
+    centroid = coordinates.mean(axis=0)
+    nearest = coordinates[np.argmin(np.sum((coordinates - centroid) ** 2, axis=1))]
+    return {"voxel": [int(value) for value in nearest], "label": label}
 
 
 @app.get("/api/sessions/{session_id}/export")

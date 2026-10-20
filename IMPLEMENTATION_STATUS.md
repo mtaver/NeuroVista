@@ -62,6 +62,7 @@ Last updated: 2026-10-20
 - These figures are a **single-case technical demonstration**, not diagnostic accuracy, cohort performance, or independent validation; possible subject overlap between the model's reported BraTS 2018 source and the MSD BraTS 2016/2017-derived case remains unresolved
 - The Colab notebook is refactored into prerequisite-checked stages with one explicit restart, complete post-restart initialization, mutually exclusive MSD/upload preparation, checksum-verified cache reuse, strict inference/export state, optional expert comparison, licence-aware result packaging, and confirmation-gated cleanup
 - The local workspace now provides **Open verified demonstration** for the preserved ignored BRATS_457 artifacts. It refuses partial or altered sets, checks the recorded scan/prediction/reference SHA-256 values, validates both mask geometries and label sets, and opens the cloud-generated prediction with its single-case comparison and overlap warning
+- Workspace refinement separates the active mask provenance from the next-upload source, provides verified MONAI/BraTS region names, equal linked MRI viewports, foreground-region navigation, and physical-coordinate-preserving 3D surfaces with fit/reset/anatomical/fullscreen cameras plus independent per-region visibility and opacity
 
 ### Refactored-notebook fresh-run verification — blocked, not complete
 

@@ -8,8 +8,9 @@ export type Scan = {
   orientation_labels: Record<Plane, Labels>
 }
 export type Measurement = { label: number; voxels: number; volume_ml: number }
-export type Mask = { name: string; kind: 'reference' | 'annotation' | 'prediction'; labels: number[]; measurements: Measurement[] }
+export type Mask = { name: string; kind: 'reference' | 'annotation' | 'prediction'; labels: number[]; label_names: Record<string, string>; measurements: Measurement[] }
 export type MeshData = { label: number; vertices: number[][]; faces: number[][] }
+export type ForegroundCentre = { voxel: [number, number, number]; label: number | null }
 export type VerifiedDemonstration = {
   case: string
   scope: string

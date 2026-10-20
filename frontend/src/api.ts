@@ -1,4 +1,4 @@
-import type { Mask, MeshData, Plane, Scan, VerifiedDemonstration } from './types'
+import type { ForegroundCentre, Mask, MeshData, Plane, Scan, VerifiedDemonstration } from './types'
 
 async function checked<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -25,4 +25,5 @@ export function sliceUrl(id: string, plane: Plane, index: number, window: number
   return `/api/sessions/${id}/slice/${plane}/${index}?${params}`
 }
 export async function getMesh(id: string, label: number) { return checked<MeshData>(await fetch(`/api/sessions/${id}/mesh/${label}`)) }
+export async function getForegroundCentre(id: string, label?: number) { return checked<ForegroundCentre>(await fetch(`/api/sessions/${id}/mask/foreground-centre${label ? `?label=${label}` : ''}`)) }
 

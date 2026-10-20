@@ -11,7 +11,7 @@ import pytest
 from typing import get_args, get_origin, get_type_hints
 
 import app.main as main_module
-from app.main import get_slice, new_session, synthetic_sample, upload_mask, upload_scan, verified_demonstration
+from app.main import foreground_centre, get_slice, new_session, synthetic_sample, upload_mask, upload_scan, verified_demonstration
 
 
 def test_invalid_upload_extension():
@@ -89,7 +89,10 @@ def test_verified_demonstration_checks_and_loads_all_artifacts(tmp_path, monkeyp
     body = verified_demonstration(session)
     assert body["scan"]["name"].startswith("BRATS_457 T1c")
     assert body["mask"]["kind"] == "prediction"
+    assert body["mask"]["label_names"]["2"] == "Whole-tumour-only region"
     assert body["demonstration"]["reference_verified"] is True
     assert body["demonstration"]["independent_validation"] is False
     assert body["demonstration"]["dice"]["whole_tumour"] == pytest.approx(0.896640)
+    centre = foreground_centre(session, label=None)
+    assert prediction[tuple(centre["voxel"])] > 0
 

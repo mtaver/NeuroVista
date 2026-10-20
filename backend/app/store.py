@@ -28,6 +28,7 @@ class SessionData:
     mask_name: str | None = None
     mask_kind: str | None = None
     labels: list[int] = field(default_factory=list)
+    label_names: dict[int, str] = field(default_factory=dict)
     synthetic: bool = False
 
 
