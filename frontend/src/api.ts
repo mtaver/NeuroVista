@@ -1,4 +1,4 @@
-import type { ForegroundCentre, Mask, MeshData, Plane, Scan, VerifiedDemonstration } from './types'
+import type { ForegroundCentre, InferenceAvailability, InferenceJob, Mask, MeshData, Plane, Scan, VerifiedDemonstration } from './types'
 
 async function checked<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -26,4 +26,10 @@ export function sliceUrl(id: string, plane: Plane, index: number, window: number
 }
 export async function getMesh(id: string, label: number) { return checked<MeshData>(await fetch(`/api/sessions/${id}/mesh/${label}`)) }
 export async function getForegroundCentre(id: string, label?: number) { return checked<ForegroundCentre>(await fetch(`/api/sessions/${id}/mask/foreground-centre${label ? `?label=${label}` : ''}`)) }
+export async function getInferenceAvailability() { return checked<InferenceAvailability>(await fetch('/api/inference/status')) }
+export async function submitInference(id: string, files: Record<'t1c'|'t1'|'t2'|'flair', File>) {
+  const body = new FormData(); (['t1c','t1','t2','flair'] as const).forEach(name => body.append(name, files[name]))
+  return checked<InferenceJob>(await fetch(`/api/sessions/${id}/inference`, { method: 'POST', body }))
+}
+export async function getInferenceJob(id: string) { return checked<InferenceJob>(await fetch(`/api/sessions/${id}/inference`)) }
 

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Activity, BadgeCheck, BrainCircuit, CircleHelp, Database, Download, Eraser, FileUp, Layers3, MapPin, RotateCcw, ScanLine, ShieldCheck, Sparkles } from 'lucide-react'
-import { clearSession, createSession, getForegroundCentre, loadSynthetic, loadVerifiedDemonstration, sliceUrl, uploadMask, uploadScan } from './api'
+import { clearSession, createSession, getForegroundCentre, getInferenceAvailability, getInferenceJob, loadSynthetic, loadVerifiedDemonstration, sliceUrl, submitInference, uploadMask, uploadScan } from './api'
 import { MeshViewer } from './components/MeshViewer'
 import { SliceView } from './components/SliceView'
-import type { Mask, Plane, Scan, VerifiedDemonstration } from './types'
+import type { InferenceAvailability, InferenceJob, Mask, Plane, Scan, VerifiedDemonstration } from './types'
 import './styles.css'
 
 const COLORS = ['#24dec7', '#ff6699', '#ffbe4b', '#8777ff', '#59b8ff']
@@ -28,8 +28,14 @@ export default function App() {
   const [demonstration, setDemonstration] = useState<VerifiedDemonstration | null>(null)
   const [jumpFeedback, setJumpFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
   const viewsRef = useRef<HTMLDivElement>(null)
+  const [inferenceAvailability, setInferenceAvailability] = useState<InferenceAvailability | null>(null)
+  const [inferenceFiles, setInferenceFiles] = useState<Partial<Record<'t1c'|'t1'|'t2'|'flair', File>>>({})
+  const [inferenceJob, setInferenceJob] = useState<InferenceJob | null>(null)
 
-  useEffect(() => { createSession().then(v => setSessionId(v.session_id)).catch(e => setError(e.message)) }, [])
+  useEffect(() => {
+    createSession().then(v => setSessionId(v.session_id)).catch(e => setError(e.message))
+    getInferenceAvailability().then(setInferenceAvailability).catch(e => setInferenceAvailability({ configured: false, available: false, status: 'error', message: e.message }))
+  }, [])
 
   const setLoaded = (nextScan: Scan, nextMask: Mask | null, nextDemonstration: VerifiedDemonstration | null = null) => {
     setScan(nextScan); setMask(nextMask); setVisible(nextMask?.labels ?? [])
@@ -39,11 +45,28 @@ export default function App() {
     const [low, high] = nextScan.metadata.intensity; setWindowLevel({ window: Math.max(high - low, 1), level: (high + low) / 2 })
     setError(''); setZoom(1)
   }
+  useEffect(() => {
+    if (!inferenceJob || !['queued','running'].includes(inferenceJob.status)) return
+    const timer = window.setTimeout(async () => {
+      try {
+        const next = await getInferenceJob(sessionId); setInferenceJob(next)
+        if (next.status === 'completed' && next.scan && next.mask) setLoaded(next.scan, next.mask)
+        if (next.status === 'failed') setError(next.error || 'Remote inference failed without a result.')
+      } catch (e) { setError(e instanceof Error ? e.message : 'Could not read remote inference status.') }
+    }, 2000)
+    return () => window.clearTimeout(timer)
+  }, [inferenceJob, sessionId])
   const run = async (message: string, work: () => Promise<void>) => { setBusy(message); setError(''); try { await work() } catch (e) { setError(e instanceof Error ? e.message : 'Unexpected error') } finally { setBusy('') } }
   const handleScan = (file: File) => run('Validating MRI geometry…', async () => setLoaded(await uploadScan(sessionId, file), null))
   const handleMask = (file: File) => run('Checking mask compatibility…', async () => { const result = await uploadMask(sessionId, file, maskKind); setMask(result); setVisible(result.labels); setJumpFeedback(null) })
   const synthetic = () => run('Creating synthetic demonstration…', async () => { const result = await loadSynthetic(sessionId); setLoaded(result.scan, result.mask) })
   const verifiedDemo = () => run('Verifying and opening BRATS_457…', async () => { const result = await loadVerifiedDemonstration(sessionId); setLoaded(result.scan, result.mask, result.demonstration) })
+  const analyse = () => run('Uploading four de-identified research volumes over HTTPS…', async () => {
+    const required = ['t1c','t1','t2','flair'] as const
+    if (!inferenceAvailability?.available) throw new Error(inferenceAvailability?.message || 'Remote inference is unavailable.')
+    if (required.some(name => !inferenceFiles[name])) throw new Error('Select T1c, T1, T2 and FLAIR from one aligned research case.')
+    const next = await submitInference(sessionId, inferenceFiles as Record<typeof required[number], File>); setInferenceJob(next)
+  })
   const jumpUnavailableReason = !mask ? 'Load a prediction mask first.' : mask.kind !== 'prediction' ? 'Available only when the active mask is an imported AI prediction.' : !mask.labels.length ? 'The active prediction has no foreground labels.' : ''
   const jumpDisabledReason = jumpUnavailableReason || (busy ? 'Wait for the current local operation to finish.' : '')
   const jumpToPrediction = async () => {
@@ -126,7 +149,13 @@ export default function App() {
         <section id="results" className="results-row"><div><Database size={20}/><span><b>Research results</b><small>Measurements use affine voxel volume and verified {scan.metadata.units} spatial units.</small></span></div><div><a className="button secondary" href={`/api/sessions/${sessionId}/export`} download><Download size={16}/>Export JSON</a><button className="button danger" onClick={clear}><Eraser size={16}/>Clear session</button></div></section>
       </>}
 
-      <section id="segmentation" className="roadmap"><span className="eyebrow">INFERENCE STATUS</span><div><h2>Local inference not connected</h2><p>{mask?.kind === 'prediction' ? 'Cloud-generated AI prediction imported. This is a file import, not a live Colab connection.' : 'NeuroVista does not run a model locally. A compatible prediction can be imported as a file; no prediction is simulated.'}</p></div><span className="status-pill">{mask?.kind === 'prediction' ? 'CLOUD OUTPUT · IMPORTED' : 'LOCAL MODEL · OFF'}</span></section>
+      <section className="panel remote-inference" aria-labelledby="remote-inference-title">
+        <header><div><span className="eyebrow">OPTIONAL GPU SERVICE</span><h2 id="remote-inference-title">Remote brain-tumour segmentation</h2></div><span className={`status-pill ${inferenceAvailability?.available ? 'available' : ''}`}>{inferenceAvailability?.available ? 'SERVICE AVAILABLE' : 'SERVICE OFFLINE'}</span></header>
+        <p>{inferenceAvailability?.message || 'Checking backend-only service configuration…'} Uploads leave this computer only after you select all four de-identified research volumes and choose Analyse.</p>
+        <div className="sequence-grid">{(['t1c','t1','t2','flair'] as const).map(name => <label key={name}><span>{name === 't1c' ? 'T1c / T1ce' : name.toUpperCase()}</span><input type="file" accept=".nii,.nii.gz" disabled={!inferenceAvailability?.available || Boolean(inferenceJob && ['queued','running'].includes(inferenceJob.status))} onChange={e => setInferenceFiles(v => ({...v, [name]: e.target.files?.[0]}))}/><small>{inferenceFiles[name]?.name || 'No file selected'}</small></label>)}</div>
+        <div className="inference-actions"><button className="button primary" disabled={!inferenceAvailability?.available || Boolean(inferenceJob && ['queued','running'].includes(inferenceJob.status))} onClick={analyse}><BrainCircuit size={16}/>Analyse</button>{inferenceJob && <div className={`job-state ${inferenceJob.status}`} role="status"><b>{inferenceJob.status.toUpperCase()}</b><span>{inferenceJob.status === 'queued' ? 'Waiting for the single GPU worker.' : inferenceJob.status === 'running' ? 'Real MONAI inference is running.' : inferenceJob.status === 'completed' ? 'Prediction verified locally and loaded.' : inferenceJob.error || 'Inference failed.'}</span></div>}</div>
+      </section>
+      <section id="segmentation" className="roadmap"><span className="eyebrow">INFERENCE STATUS</span><div><h2>Local inference not connected</h2><p>{mask?.kind === 'prediction' ? 'Cloud-generated AI prediction imported. This file was verified and loaded locally; the model does not run in the viewer.' : 'NeuroVista does not run a model locally. Configure the optional authenticated GPU service or import a compatible prediction file.'}</p></div><span className="status-pill">{mask?.kind === 'prediction' ? 'CLOUD OUTPUT · IMPORTED' : 'LOCAL MODEL · OFF'}</span></section>
     </main>
     <footer id="documentation"><span>NeuroVista 0.1 · Local research workspace</span><span>Uploads: temporary local storage · Setup details are in README.md</span></footer>
   </div>

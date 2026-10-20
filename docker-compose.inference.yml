@@ -1,0 +1,24 @@
+services:
+  inference:
+    build:
+      context: .
+      dockerfile: inference_service/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      NEUROVISTA_INFERENCE_TOKEN: ${NEUROVISTA_INFERENCE_TOKEN:?set a long random token}
+      NEUROVISTA_INFERENCE_TIMEOUT_SECONDS: "900"
+      NEUROVISTA_INFERENCE_RETENTION_MINUTES: "30"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    read_only: true
+    tmpfs:
+      - /tmp:size=4g,mode=1770
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

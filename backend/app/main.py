@@ -18,6 +18,7 @@ from .config import settings
 from .imaging import (ImagingError, label_measurements, label_mesh, load_nifti, orientation_labels,
                       render_slice, validate_mask)
 from .store import SessionData, store
+from . import remote_inference
 
 app = FastAPI(title="NeuroVista API", version="0.1.0", description="Local-only MRI research workspace")
 app.add_middleware(CORSMiddleware, allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
@@ -63,6 +64,11 @@ def health() -> dict:
     return {"status": "ok", "service": "NeuroVista", "storage": "temporary local files", "ai": "not_connected"}
 
 
+@app.get("/api/inference/status")
+async def inference_status() -> dict:
+    return await remote_inference.availability()
+
+
 @app.post("/api/sessions")
 def new_session() -> dict:
     session = store.create()
@@ -104,6 +110,56 @@ async def upload_mask(session_id: str, kind: Literal["reference", "annotation", 
     session.mask_name, session.mask_kind, session.labels = file.filename, kind, labels
     session.label_names = {}
     return mask_payload(session)
+
+
+@app.post("/api/sessions/{session_id}/inference", status_code=202)
+async def submit_inference(session_id: str, t1c: UploadFile = File(...), t1: UploadFile = File(...),
+                           t2: UploadFile = File(...), flair: UploadFile = File(...)) -> dict:
+    try: session = store.get(session_id)
+    except KeyError: fail(404, "Session not found.")
+    paths = {}
+    try:
+        for name, upload in (("t1c", t1c), ("t1", t1), ("t2", t2), ("flair", flair)):
+            suffix = ".nii.gz" if (upload.filename or "").lower().endswith(".nii.gz") else ".nii"
+            path = session.directory / f"remote-{name}{suffix}"; await save_upload(upload, path); paths[name] = path
+        loaded = {name: load_nifti(path, settings.max_decompressed_bytes) for name, path in paths.items()}
+        reference = loaded["t1c"][0]
+        for name in remote_inference.SEQUENCES:
+            image, data, metadata = loaded[name]
+            if not np.isfinite(data).all(): fail(422, f"{name}: all voxels must be finite.")
+            if metadata.units != "mm": fail(422, f"{name}: spatial units must be millimetres.")
+            if not np.allclose(metadata.spacing, (1, 1, 1), rtol=0, atol=1e-3): fail(422, f"{name}: model requires 1 mm spacing.")
+            if image.shape != reference.shape or not np.allclose(image.affine, reference.affine, rtol=1e-5, atol=1e-4):
+                fail(422, f"{name}: geometry does not match T1c; automatic registration is disabled.")
+        response = await remote_inference.submit(paths)
+        session.remote_job_id = response["job_id"]
+        return response
+    except remote_inference.RemoteInferenceError as exc:
+        fail(502, str(exc))
+
+
+@app.get("/api/sessions/{session_id}/inference")
+async def get_inference(session_id: str) -> dict:
+    try: session = store.get(session_id)
+    except KeyError: fail(404, "Session not found.")
+    if not session.remote_job_id: fail(409, "No remote inference job exists for this session.")
+    try:
+        state = await remote_inference.status(session.remote_job_id)
+        if state.get("status") != "completed": return state
+        t1c = next((session.directory / name for name in ("remote-t1c.nii.gz", "remote-t1c.nii") if (session.directory / name).is_file()), None)
+        if not t1c: fail(410, "The local T1c input is no longer available for result verification.")
+        scan_img, scan, metadata, mask_img, mask, labels, provenance = await remote_inference.download_and_validate(
+            session.remote_job_id, session.directory, t1c, settings.max_decompressed_bytes)
+        session.scan_img, session.scan, session.metadata = scan_img, scan, metadata
+        session.scan_name, session.synthetic = "T1c · remote inference reference", False
+        session.mask_img, session.mask, session.labels = mask_img, mask, labels
+        session.mask_name, session.mask_kind = "Remote MONAI prediction · imported", "prediction"
+        session.label_names = {1: "Non-enhancing tumour-core region", 2: "Whole-tumour-only region", 4: "Enhancing tumour"}
+        return {**state, "scan": scan_payload(session), "mask": mask_payload(session),
+                "provenance": {"model": provenance.get("model"), "hardware": provenance.get("hardware"),
+                               "inference": provenance.get("inference")}}
+    except remote_inference.RemoteInferenceError as exc:
+        fail(502, str(exc))
 
 
 @app.post("/api/sessions/{session_id}/synthetic")

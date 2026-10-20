@@ -2,7 +2,7 @@
 
 ## Connection status
 
-**Local inference not connected.** NeuroVista contains no local model weights and performs no local AI inference. A cloud-generated prediction file has been imported and verified for one case; this is not a live Colab connection or a claim of clinical validation.
+**Local inference not connected.** NeuroVista contains no local model weights and performs no local AI inference. A portable, optional remote GPU service has been implemented but is not deployed or GPU-verified. A cloud-generated prediction file has been imported and verified for one case; this is not a live Colab connection or a claim of clinical validation.
 
 ## Candidate
 

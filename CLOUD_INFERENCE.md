@@ -4,6 +4,8 @@
 
 NeuroVista remains **Local inference not connected**. One user-initiated Colab run produced files that were downloaded and imported locally as **Cloud-generated AI prediction imported**. There is no live Colab connection, configured endpoint, background synchronization or paid resource provisioned by NeuroVista.
 
+An authenticated portable Docker worker and optional local-backend client are now implemented in source, but remain unprovisioned and have not executed on a GPU. The original file-import workflow remains intact. Deployment requirements, current provider research and the approval recommendation are recorded in `HOSTED_INFERENCE.md`.
+
 The opt-in notebook at `notebooks/NeuroVista_MONAI_BraTS_Colab.ipynb` completed one real `BRATS_457` run. The resulting hashes, geometry, labels, overlays, measurements and 3D meshes were verified locally. Expert comparison produced Dice 0.896640 whole tumour, 0.834695 tumour core and 0.831881 enhancing tumour. This establishes a single-case technical demonstration only; it does not establish diagnostic accuracy, independence, cohort performance or clinical suitability. Possible training-subject overlap remains unresolved.
 
 The proposed boundary keeps all viewing, mask inspection, measurements, exports, and session management local. A GPU worker would be used only for an explicitly initiated inference job after the user reviews what will be sent and where.

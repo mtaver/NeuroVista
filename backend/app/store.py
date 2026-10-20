@@ -30,6 +30,7 @@ class SessionData:
     labels: list[int] = field(default_factory=list)
     label_names: dict[int, str] = field(default_factory=dict)
     synthetic: bool = False
+    remote_job_id: str | None = None
 
 
 class SessionStore:

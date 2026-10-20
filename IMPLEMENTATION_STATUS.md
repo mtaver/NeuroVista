@@ -43,6 +43,7 @@ Last updated: 2026-10-20
 
 ## Stage 2 — cloud-file workflow verified; local inference not connected
 
+- An authenticated portable Docker GPU worker and optional local-backend connection are implemented. No hosted service, paid resource or persistent endpoint has been created, and this new path has uploaded no scans. Real container GPU execution and the first authenticated HTTPS end-to-end run remain unverified; see `HOSTED_INFERENCE.md`.
 - Candidate: Project MONAI `brats_mri_segmentation` bundle v0.5.4; official 18.8 MB weight availability, SHA-256, Apache-2.0 licence, four-sequence channel order, preprocessing, inference window, and output mapping verified in `MODEL_CARD.md`
 - Status shown by the app: **Local inference not connected**; when applicable, **Cloud-generated AI prediction imported**
 - No local model is installed and there is no live Colab connection

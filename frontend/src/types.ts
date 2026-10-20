@@ -23,4 +23,9 @@ export type VerifiedDemonstration = {
   inference_seconds: number
   peak_gpu_memory_gib: number
 }
+export type InferenceAvailability = { configured: boolean; available: boolean; status: string; message: string; model?: string; model_version?: string }
+export type InferenceJob = {
+  job_id: string; status: 'queued' | 'running' | 'completed' | 'failed'; error?: string | null; result_available?: boolean
+  scan?: Scan; mask?: Mask; provenance?: Record<string, unknown>
+}
 

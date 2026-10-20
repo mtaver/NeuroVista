@@ -19,6 +19,8 @@ NeuroVista is a local-first research and education workspace for inspecting 3D N
 
 Local AI inference remains disabled. The UI reports **“Local inference not connected”**. When a verified external result file is loaded it separately reports **“Cloud-generated AI prediction imported”**; this does not imply a live Colab connection.
 
+An optional, unprovisioned hosted-GPU workflow is now prepared. When the local backend is configured with an HTTPS endpoint and backend-only bearer token, the UI accepts four explicitly labelled sequences, reports queued/running/completed/failed states, and loads a checksum- and geometry-verified result automatically. No endpoint or credential is built into frontend code. See [HOSTED_INFERENCE.md](HOSTED_INFERENCE.md).
+
 ## Windows prerequisites
 
 - Python 3.11 or 3.12, 64-bit
@@ -122,12 +124,14 @@ Uploads, datasets, weights, credentials, and common patient-data file extensions
 ```text
 backend/app/       FastAPI service and imaging logic
 backend/tests/     geometry, volume, orientation, and upload tests
+inference_service/ portable authenticated GPU worker and Docker image
 frontend/src/      React/TypeScript workspace
 DATA_SOURCES.md    official sample-data acquisition and licensing
 MODEL_CARD.md      planned model integration facts and blockers
 CLOUD_INFERENCE.md assessed local-viewer/cloud-GPU workflow (not provisioned)
 notebooks/         Colab preparation for real MONAI BraTS inference
 IMPLEMENTATION_STATUS.md verified scope and limitations
+HOSTED_INFERENCE.md deployment contract, provider comparison and approval gate
 ```
 
 ## Data and model setup
