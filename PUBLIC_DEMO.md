@@ -2,13 +2,16 @@
 
 ## Scope
 
-The public site is a static, browser-only presentation of the preserved BRATS_457 workflow. It has no Python backend, upload endpoint, inference endpoint, credential, paid resource or server-side storage.
+The public site is a static, browser-only NIfTI workspace and presentation of the preserved BRATS_457 workflow. It has no Python backend, network upload endpoint, inference endpoint, credential, paid resource or server-side storage. User-selected files are read only into volatile browser memory and are not transmitted or retained.
 
 Public URL: https://mtaver.github.io/NeuroVista/
 
 Working online features:
 
+- local `.nii` and `.nii.gz` scan selection with file-size, three-dimensionality, datatype, finite-value, spatial-unit and affine validation
+- optional matching-mask selection with required source labelling, dimension and affine compatibility checks
 - linked axial, coronal and sagittal T1c slice navigation
+- voxel-derived mask volumes and affine-preserving 3D surfaces generated locally in the browser
 - precomputed AI segmentation overlay, per-region visibility and opacity
 - recorded affine-derived region volumes
 - interactive rotate/zoom 3D surfaces with independent opacity
@@ -16,7 +19,7 @@ Working online features:
 - explicit single-case, non-independent-validation and possible training-overlap limitations
 - dataset, licence, transformation and model attribution
 
-Uploads are deliberately absent. Hosted inference remains disabled. Users who need local NIfTI upload and geometry validation must run the local application.
+Selecting a local file does not upload it: the static page has no receiving endpoint. **Clear session** discards the current in-memory scan and mask. Hosted inference and automatic AI analysis remain disabled; uploaded masks retain the source category selected by the user and are never automatically described as AI predictions.
 
 ## Published assets
 

@@ -4,7 +4,7 @@ NeuroVista is a local-first research and education workspace for inspecting 3D N
 
 ## Public browser demonstration
 
-The free public site is available at **https://mtaver.github.io/NeuroVista/**. It displays a transformed, attributed MSD BRATS_457 T1c sample and its previously generated MONAI prediction entirely in the browser. It does not expose local files or paths, accept uploads, call the FastAPI backend, or run inference. See [PUBLIC_DEMO.md](PUBLIC_DEMO.md).
+The free public site is available at **https://mtaver.github.io/NeuroVista/**. It displays a transformed, attributed MSD BRATS_457 T1c sample and its previously generated MONAI prediction, and it can open user-selected 3D `.nii`/`.nii.gz` scans and matching masks entirely in browser memory. Files are not transmitted or retained. The site does not expose local files or paths, call the FastAPI backend, or run inference. See [PUBLIC_DEMO.md](PUBLIC_DEMO.md).
 
 ## What works now
 

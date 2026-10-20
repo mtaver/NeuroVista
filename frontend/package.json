@@ -7,12 +7,14 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "build:public": "vite build --config vite.public.config.ts",
+    "typecheck:public": "tsc -p ../public_demo_src/tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
     "lucide-react": "^0.545.0",
+    "nifti-reader-js": "^0.8.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "three": "^0.180.0"
@@ -27,4 +29,3 @@
     "vitest": "^3.2.4"
   }
 }
-

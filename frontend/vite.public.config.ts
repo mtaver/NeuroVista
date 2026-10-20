@@ -12,6 +12,7 @@ export default defineConfig({
     three: resolve(__dirname, 'node_modules/three'),
     '@react-three/fiber': resolve(__dirname, 'node_modules/@react-three/fiber'),
     '@react-three/drei': resolve(__dirname, 'node_modules/@react-three/drei'),
+    'nifti-reader-js': resolve(__dirname, 'node_modules/nifti-reader-js'),
   } },
   build: { outDir: resolve(__dirname, '../public_demo_dist'), emptyOutDir: true },
 })

@@ -5,7 +5,8 @@ Last updated: 2026-10-20
 ## Public static demonstration
 
 - A separate browser-only GitHub Pages build presents the permitted CC BY-SA 4.0 MSD BRATS_457-derived display assets, precomputed AI overlay, region volumes, interactive 3D surfaces and recorded single-case Dice comparison.
-- Public uploads and hosted inference are disabled. The site contains no service credential, local path, `.tmp` file, original NIfTI, or Python-backend dependency.
+- Public file selection is browser-local: 3D `.nii`/`.nii.gz` scans and compatible masks are parsed in volatile memory without a receiving endpoint, persistence, service credential, local path, `.tmp` file, published original NIfTI, or Python-backend dependency. Hosted inference remains disabled.
+- The public viewer validates size, datatype, finite voxels, dimensions, supported spatial units and affine geometry; a mask requires an explicit source category before local volume and surface generation.
 - Documentation identifies the public site as a static presentation of a previously generated result; hosted inference and uploads remain disabled.
 - Dataset attribution, transformation notice, ShareAlike terms and possible training-subject-overlap limitation are displayed publicly.
 
