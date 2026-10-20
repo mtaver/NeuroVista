@@ -61,6 +61,29 @@ Last updated: 2026-10-20
 - The observed run used a **Tesla T4**, completed model inference in **1.488733485 seconds**, and measured **2.760735 GiB** peak allocated GPU memory
 - These figures are a **single-case technical demonstration**, not diagnostic accuracy, cohort performance, or independent validation; possible subject overlap between the model's reported BraTS 2018 source and the MSD BraTS 2016/2017-derived case remains unresolved
 - The Colab notebook is refactored into prerequisite-checked stages with one explicit restart, complete post-restart initialization, mutually exclusive MSD/upload preparation, checksum-verified cache reuse, strict inference/export state, optional expert comparison, licence-aware result packaging, and confirmation-gated cleanup
+- The local workspace now provides **Open verified demonstration** for the preserved ignored BRATS_457 artifacts. It refuses partial or altered sets, checks the recorded scan/prediction/reference SHA-256 values, validates both mask geometries and label sets, and opens the cloud-generated prediction with its single-case comparison and overlap warning
+
+### Refactored-notebook fresh-run verification — blocked, not complete
+
+GPU attempts are paused. The latest fresh-session verification is **blocked by Colab GPU unavailability** and must not be read as end-to-end verification of the refactored notebook.
+
+Stages actually verified before the block:
+
+- The Colab `2026.07` fallback runtime started with Python **3.12.13** after the failed Python 3.13 runtime was terminated
+- The pinned Python 3.12 dependency installation completed, the one required session restart completed, and post-restart imports/version checks passed
+- Verified runtime: PyTorch `2.4.0+cu121`, torchvision `0.19.0+cu121`, torchaudio `2.4.0+cu121`, MONAI `1.4.0`, NumPy `1.26.4`, nibabel `5.2.1`, Tesla T4 with CUDA available, 14.563 GiB VRAM, and 12.671 GiB total RAM
+- Official MONAI bundle v0.5.4 weights downloaded and matched SHA-256 `860ccb3f1c21c99d0410ad8a1ac4ef6b8fab60cec0a503b0ba42675741a750ae`
+- The official MSD demonstration source was selected and data preparation was started
+
+Not verified in that fresh run:
+
+- completion of MSD case preparation
+- inference
+- expert-reference comparison
+- packaging and download
+- cleanup after confirmed download
+
+On reconnection, Colab reported **“Failed to assign a backend — No backend with GPU available.”** The successful BRATS_457 metrics documented above belong to the earlier completed run and remain valid as a preserved single-case demonstration; they do not make the refactored fresh run complete.
 
 ## Stage 3 — planned, not implemented
 

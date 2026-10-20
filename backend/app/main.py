@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -148,6 +149,89 @@ def mask_payload(session: SessionData) -> dict:
     assert session.mask is not None and session.metadata is not None
     return {"name": session.mask_name, "kind": session.mask_kind, "labels": session.labels,
             "measurements": label_measurements(session.mask, np.asarray(session.metadata.affine), session.metadata.units)}
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+@app.post("/api/sessions/{session_id}/verified-demonstration")
+def verified_demonstration(session_id: str) -> dict:
+    """Open the preserved BRATS_457 technical demonstration without uploading it."""
+    try:
+        session = store.get(session_id)
+    except KeyError:
+        fail(404, "Session not found.")
+
+    names = {
+        "scan": "BRATS_457_t1c.nii.gz",
+        "prediction": "neurovista_ai_prediction.nii.gz",
+        "reference": "BRATS_457_reference.nii.gz",
+        "provenance": "neurovista_ai_prediction_provenance.json",
+        "comparison": "comparison.json",
+    }
+    paths = {key: settings.verified_demo_dir / name for key, name in names.items()}
+    missing = [name for key, name in names.items() if not paths[key].is_file()]
+    if missing:
+        fail(404, f"Verified demonstration is unavailable. Missing from {settings.verified_demo_dir}: {', '.join(missing)}")
+
+    try:
+        provenance = json.loads(paths["provenance"].read_text(encoding="utf-8"))
+        comparison = json.loads(paths["comparison"].read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        fail(422, f"Verified demonstration metadata could not be read: {exc}")
+
+    expected_scan_hash = provenance.get("input_contract", {}).get("inputs", {}).get("t1c", {}).get("sha256")
+    expected_prediction_hash = provenance.get("output", {}).get("sha256")
+    expected_reference_hash = comparison.get("reference", {}).get("sha256")
+    checks = (
+        ("T1c scan", paths["scan"], expected_scan_hash),
+        ("AI prediction", paths["prediction"], expected_prediction_hash),
+        ("expert reference", paths["reference"], expected_reference_hash),
+    )
+    for label, path, expected in checks:
+        if not expected or _sha256(path).lower() != str(expected).lower():
+            fail(422, f"Verified demonstration {label} failed its recorded SHA-256 check.")
+
+    scan_img, scan, metadata = load_nifti(paths["scan"], settings.max_decompressed_bytes)
+    prediction_img, prediction, _ = load_nifti(paths["prediction"], settings.max_decompressed_bytes)
+    reference_img, reference, _ = load_nifti(paths["reference"], settings.max_decompressed_bytes)
+    prediction_labels = validate_mask(scan_img, scan, prediction_img, prediction)
+    reference_labels = validate_mask(scan_img, scan, reference_img, reference)
+    if not set(prediction_labels).issubset({1, 2, 4}):
+        fail(422, f"Verified prediction has unsupported labels: {prediction_labels}")
+    if not set(reference_labels).issubset({1, 2, 3}):
+        fail(422, f"Verified reference has unsupported labels: {reference_labels}")
+
+    regions = comparison.get("regions", {})
+    required_regions = ("whole_tumour", "tumour_core", "enhancing_tumour")
+    if any(regions.get(region, {}).get("status") != "calculated" for region in required_regions):
+        fail(422, "Verified demonstration comparison is incomplete.")
+
+    session.scan_img, session.scan, session.metadata = scan_img, scan, metadata
+    session.scan_name, session.synthetic = "BRATS_457 T1c · verified local demonstration", False
+    session.mask_img, session.mask = prediction_img, np.rint(prediction).astype(np.int32)
+    session.mask_name, session.mask_kind, session.labels = "BRATS_457 AI prediction · imported", "prediction", prediction_labels
+    return {
+        "scan": scan_payload(session),
+        "mask": mask_payload(session),
+        "demonstration": {
+            "case": "BRATS_457",
+            "scope": "single-case technical demonstration",
+            "reference_verified": True,
+            "reference_labels": reference_labels,
+            "dice": {region: regions[region]["dice"] for region in required_regions},
+            "independent_validation": bool(comparison.get("independent_validation", False)),
+            "limitation": comparison.get("independence_note", "Possible training-subject overlap has not been ruled out."),
+            "gpu": provenance.get("hardware", {}).get("gpu"),
+            "inference_seconds": provenance.get("inference", {}).get("elapsed_seconds"),
+            "peak_gpu_memory_gib": provenance.get("inference", {}).get("peak_gpu_memory_gib"),
+        },
+    }
 
 
 @app.get("/api/sessions/{session_id}/slice/{plane}/{index}")

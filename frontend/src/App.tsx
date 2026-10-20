@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { Activity, BrainCircuit, CircleHelp, Database, Download, Eraser, FileUp, Layers3, RotateCcw, ScanLine, ShieldCheck, Sparkles } from 'lucide-react'
-import { clearSession, createSession, loadSynthetic, sliceUrl, uploadMask, uploadScan } from './api'
+import { Activity, BadgeCheck, BrainCircuit, CircleHelp, Database, Download, Eraser, FileUp, Layers3, RotateCcw, ScanLine, ShieldCheck, Sparkles } from 'lucide-react'
+import { clearSession, createSession, loadSynthetic, loadVerifiedDemonstration, sliceUrl, uploadMask, uploadScan } from './api'
 import { MeshViewer } from './components/MeshViewer'
 import { SliceView } from './components/SliceView'
-import type { Mask, Plane, Scan } from './types'
+import type { Mask, Plane, Scan, VerifiedDemonstration } from './types'
 import './styles.css'
 
 const COLORS = ['#24dec7', '#ff6699', '#ffbe4b', '#8777ff', '#59b8ff']
@@ -25,11 +25,13 @@ export default function App() {
   const [error, setError] = useState('')
   const [maskKind, setMaskKind] = useState<'reference' | 'annotation' | 'prediction'>('reference')
   const [zoom, setZoom] = useState(1)
+  const [demonstration, setDemonstration] = useState<VerifiedDemonstration | null>(null)
 
   useEffect(() => { createSession().then(v => setSessionId(v.session_id)).catch(e => setError(e.message)) }, [])
 
-  const setLoaded = (nextScan: Scan, nextMask: Mask | null) => {
+  const setLoaded = (nextScan: Scan, nextMask: Mask | null, nextDemonstration: VerifiedDemonstration | null = null) => {
     setScan(nextScan); setMask(nextMask); setVisible(nextMask?.labels ?? [])
+    setDemonstration(nextDemonstration)
     setPosition(nextScan.metadata.shape.map(v => Math.floor(v / 2)) as [number, number, number])
     const [low, high] = nextScan.metadata.intensity; setWindowLevel({ window: Math.max(high - low, 1), level: (high + low) / 2 })
     setError(''); setZoom(1)
@@ -38,8 +40,9 @@ export default function App() {
   const handleScan = (file: File) => run('Validating MRI geometry…', async () => setLoaded(await uploadScan(sessionId, file), null))
   const handleMask = (file: File) => run('Checking mask compatibility…', async () => { const result = await uploadMask(sessionId, file, maskKind); setMask(result); setVisible(result.labels) })
   const synthetic = () => run('Creating synthetic demonstration…', async () => { const result = await loadSynthetic(sessionId); setLoaded(result.scan, result.mask) })
-  const reset = () => scan && setLoaded(scan, mask)
-  const clear = () => run('Clearing temporary files…', async () => { await clearSession(sessionId); const next = await createSession(); setSessionId(next.session_id); setScan(null); setMask(null); setVisible([]) })
+  const verifiedDemo = () => run('Verifying and opening BRATS_457…', async () => { const result = await loadVerifiedDemonstration(sessionId); setLoaded(result.scan, result.mask, result.demonstration) })
+  const reset = () => scan && setLoaded(scan, mask, demonstration)
+  const clear = () => run('Clearing temporary files…', async () => { await clearSession(sessionId); const next = await createSession(); setSessionId(next.session_id); setScan(null); setMask(null); setDemonstration(null); setVisible([]) })
 
   const urls = useMemo(() => {
     if (!scan) return null
@@ -71,14 +74,15 @@ export default function App() {
     <div className="notice"><ShieldCheck size={15} /> Research and education only — not for clinical diagnosis. Files stay on this computer and are removed when the session is cleared.</div>
     <main id="workspace">
       <section className="hero" id="samples"><div><span className="eyebrow">STAGE 1 · MRI WORKSPACE</span><h1>Explore anatomy.<br/><span>Keep the geometry honest.</span></h1><p>Inspect NIfTI volumes and verified segmentation masks across linked anatomical planes and 3D surfaces.</p></div>
-        <div className="hero-actions"><UploadButton label="Upload MRI" accept=".nii,.nii.gz" onFile={handleScan} /><button className="button ghost" onClick={synthetic} disabled={!sessionId}><Sparkles size={16}/>Try synthetic sample</button></div>
+        <div className="hero-actions"><button className="button primary" onClick={verifiedDemo} disabled={!sessionId}><BadgeCheck size={16}/>Open verified demonstration</button><UploadButton label="Upload MRI" accept=".nii,.nii.gz" onFile={handleScan} /><button className="button ghost" onClick={synthetic} disabled={!sessionId}><Sparkles size={16}/>Try synthetic sample</button></div>
       </section>
 
       {error && <div role="alert" className="alert error-state"><CircleHelp size={18}/><div><b>Could not complete that action</b><span>{error}</span></div></div>}
       {busy && <div className="alert loading"><span className="spinner"/><div><b>{busy}</b><span>Processing locally; no scan data is sent elsewhere.</span></div></div>}
 
-      {!scan ? <section className="empty-state"><div className="scan-glyph"><ScanLine size={62}/><i/></div><h2>Your workspace is ready</h2><p>Upload one 3D NIfTI MRI volume, or open the synthetic demonstration to inspect the complete workflow.</p><div><UploadButton label="Choose NIfTI scan" accept=".nii,.nii.gz" onFile={handleScan}/><button className="button ghost" onClick={synthetic}><Sparkles size={16}/>Synthetic demonstration</button></div><small>Accepted: .nii, .nii.gz · Maximum 256 MB compressed</small></section> : <>
+      {!scan ? <section className="empty-state"><div className="scan-glyph"><ScanLine size={62}/><i/></div><h2>Your workspace is ready</h2><p>Open the preserved BRATS_457 technical demonstration in one click, upload a 3D NIfTI volume, or use synthetic data.</p><div><button className="button primary" onClick={verifiedDemo} disabled={!sessionId}><BadgeCheck size={16}/>Open verified demonstration</button><UploadButton label="Choose NIfTI scan" accept=".nii,.nii.gz" onFile={handleScan}/><button className="button ghost" onClick={synthetic}><Sparkles size={16}/>Synthetic demonstration</button></div><small>The verified demonstration is available only when all five ignored local artifacts pass hash and geometry checks.</small></section> : <>
         {scan.synthetic && <div className="synthetic-badge"><Sparkles size={15}/> Synthetic demonstration — not a patient scan</div>}
+        {demonstration && <div className="synthetic-badge verified"><BadgeCheck size={15}/> BRATS_457 verified local demonstration · AI prediction imported</div>}
         <section className="workspace-grid">
           <aside className="panel controls">
             <div className="panel-heading"><div><span>01</span><h2>Scan</h2></div><Activity size={18}/></div>
@@ -99,6 +103,7 @@ export default function App() {
             <section className="panel three-panel"><header><div><span className="eyebrow">VERIFIED MASK GEOMETRY</span><h2>Interactive 3D surfaces</h2></div><small>Drag to rotate · Scroll to zoom</small></header><MeshViewer sessionId={sessionId} labels={mask?.labels ?? []} visible={visible}/></section>
           </div>
         </section>
+        {demonstration && <section className="panel demo-comparison"><header><div><span className="eyebrow">SINGLE-CASE TECHNICAL DEMONSTRATION</span><h2>Prediction compared with the MSD expert reference</h2></div><span className="status-pill">NOT INDEPENDENT VALIDATION</span></header><div className="dice-grid"><div><b>{demonstration.dice.whole_tumour.toFixed(6)}</b><span>Whole tumour Dice</span></div><div><b>{demonstration.dice.tumour_core.toFixed(6)}</b><span>Tumour core Dice</span></div><div><b>{demonstration.dice.enhancing_tumour.toFixed(6)}</b><span>Enhancing tumour Dice</span></div></div><p><CircleHelp size={16}/><span>{demonstration.limitation} These values demonstrate one completed file workflow; they do not establish diagnostic accuracy or cohort performance.</span></p></section>}
         <section id="results" className="results-row"><div><Database size={20}/><span><b>Research results</b><small>Measurements use affine voxel volume and verified {scan.metadata.units} spatial units.</small></span></div><div><a className="button secondary" href={`/api/sessions/${sessionId}/export`} download><Download size={16}/>Export JSON</a><button className="button danger" onClick={clear}><Eraser size={16}/>Clear session</button></div></section>
       </>}
 

@@ -1,4 +1,4 @@
-import type { Mask, MeshData, Plane, Scan } from './types'
+import type { Mask, MeshData, Plane, Scan, VerifiedDemonstration } from './types'
 
 async function checked<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -11,6 +11,7 @@ async function checked<T>(response: Response): Promise<T> {
 export async function createSession() { return checked<{session_id: string}>(await fetch('/api/sessions', { method: 'POST' })) }
 export async function clearSession(id: string) { return checked<{cleared: boolean}>(await fetch(`/api/sessions/${id}`, { method: 'DELETE' })) }
 export async function loadSynthetic(id: string) { return checked<{scan: Scan; mask: Mask}>(await fetch(`/api/sessions/${id}/synthetic`, { method: 'POST' })) }
+export async function loadVerifiedDemonstration(id: string) { return checked<{scan: Scan; mask: Mask; demonstration: VerifiedDemonstration}>(await fetch(`/api/sessions/${id}/verified-demonstration`, { method: 'POST' })) }
 export async function uploadScan(id: string, file: File) {
   const body = new FormData(); body.append('file', file)
   return checked<Scan>(await fetch(`/api/sessions/${id}/scan`, { method: 'POST', body }))

@@ -10,4 +10,16 @@ export type Scan = {
 export type Measurement = { label: number; voxels: number; volume_ml: number }
 export type Mask = { name: string; kind: 'reference' | 'annotation' | 'prediction'; labels: number[]; measurements: Measurement[] }
 export type MeshData = { label: number; vertices: number[][]; faces: number[][] }
+export type VerifiedDemonstration = {
+  case: string
+  scope: string
+  reference_verified: boolean
+  reference_labels: number[]
+  dice: { whole_tumour: number; tumour_core: number; enhancing_tumour: number }
+  independent_validation: boolean
+  limitation: string
+  gpu: string
+  inference_seconds: number
+  peak_gpu_memory_gib: number
+}
 

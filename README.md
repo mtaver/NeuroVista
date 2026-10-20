@@ -15,6 +15,7 @@ NeuroVista is a local-first research and education workspace for inspecting 3D N
 - interactive 3D mask surfaces
 - local temporary sessions, clear-session control, and JSON research export
 - bundled synthetic workflow labelled **“Synthetic demonstration — not a patient scan”**
+- one-click **Open verified demonstration** action for an intact, locally preserved BRATS_457 artifact set
 
 Local AI inference remains disabled. The UI reports **“Local inference not connected”**. When a verified external result file is loaded it separately reports **“Cloud-generated AI prediction imported”**; this does not imply a live Colab connection.
 
@@ -121,6 +122,20 @@ See [CLOUD_INFERENCE.md](CLOUD_INFERENCE.md) for a privacy-gated cloud-GPU desig
 For a beginner-friendly walkthrough using an official MSD/BraTS tumour research case, including download verification, four-channel splitting, execution blockers, cleanup and local import, see [COLAB_BEGINNER_GUIDE.md](COLAB_BEGINNER_GUIDE.md).
 
 One real GPU inference has completed for the single MSD Task01 `BRATS_457` case and its exported files passed local hash, label and geometry checks. The corresponding expert comparison produced Dice 0.896640 whole tumour, 0.834695 tumour core and 0.831881 enhancing tumour. See [BRATS_457_WORKFLOW.md](BRATS_457_WORKFLOW.md) for the measured run and limitations. This is a single-case demonstration, does not connect a model locally, and does not establish diagnostic accuracy or independent validation.
+
+The refactored notebook's separate fresh-run verification is currently blocked because Colab could not assign another GPU backend. Installation, the required restart, post-restart initialization, runtime/GPU inspection and official-weight checksum verification passed before the block; data preparation through cleanup did not complete in that fresh run. GPU attempts are paused.
+
+## Open the preserved verified demonstration
+
+The **Open verified demonstration** button looks only in the ignored local directory `.tmp/prediction-import-BRATS_457`. It requires:
+
+- `BRATS_457_t1c.nii.gz`
+- `neurovista_ai_prediction.nii.gz`
+- `BRATS_457_reference.nii.gz`
+- `neurovista_ai_prediction_provenance.json`
+- `comparison.json`
+
+The backend checks the recorded scan, prediction and reference SHA-256 values, validates prediction and reference geometry/labels, then displays the prediction as **AI prediction · imported**. The expert reference is used to attest the recorded comparison; the active overlay remains the prediction. If a file is absent or fails validation, the UI reports the exact problem. These ignored local artifacts are never added to Git.
 
 After a successful notebook run, extract `neurovista_prediction_package.zip`. In the local viewer:
 
