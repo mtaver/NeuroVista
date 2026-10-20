@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Activity, BadgeCheck, BrainCircuit, CircleHelp, Database, Download, Eraser, FileUp, Layers3, MapPin, RotateCcw, ScanLine, ShieldCheck, Sparkles } from 'lucide-react'
 import { clearSession, createSession, getForegroundCentre, loadSynthetic, loadVerifiedDemonstration, sliceUrl, uploadMask, uploadScan } from './api'
 import { MeshViewer } from './components/MeshViewer'
@@ -26,24 +26,42 @@ export default function App() {
   const [maskKind, setMaskKind] = useState<'reference' | 'annotation' | 'prediction'>('reference')
   const [zoom, setZoom] = useState(1)
   const [demonstration, setDemonstration] = useState<VerifiedDemonstration | null>(null)
+  const [jumpFeedback, setJumpFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
+  const viewsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { createSession().then(v => setSessionId(v.session_id)).catch(e => setError(e.message)) }, [])
 
   const setLoaded = (nextScan: Scan, nextMask: Mask | null, nextDemonstration: VerifiedDemonstration | null = null) => {
     setScan(nextScan); setMask(nextMask); setVisible(nextMask?.labels ?? [])
     setDemonstration(nextDemonstration)
+    setJumpFeedback(null)
     setPosition(nextScan.metadata.shape.map(v => Math.floor(v / 2)) as [number, number, number])
     const [low, high] = nextScan.metadata.intensity; setWindowLevel({ window: Math.max(high - low, 1), level: (high + low) / 2 })
     setError(''); setZoom(1)
   }
   const run = async (message: string, work: () => Promise<void>) => { setBusy(message); setError(''); try { await work() } catch (e) { setError(e instanceof Error ? e.message : 'Unexpected error') } finally { setBusy('') } }
   const handleScan = (file: File) => run('Validating MRI geometry…', async () => setLoaded(await uploadScan(sessionId, file), null))
-  const handleMask = (file: File) => run('Checking mask compatibility…', async () => { const result = await uploadMask(sessionId, file, maskKind); setMask(result); setVisible(result.labels) })
+  const handleMask = (file: File) => run('Checking mask compatibility…', async () => { const result = await uploadMask(sessionId, file, maskKind); setMask(result); setVisible(result.labels); setJumpFeedback(null) })
   const synthetic = () => run('Creating synthetic demonstration…', async () => { const result = await loadSynthetic(sessionId); setLoaded(result.scan, result.mask) })
   const verifiedDemo = () => run('Verifying and opening BRATS_457…', async () => { const result = await loadVerifiedDemonstration(sessionId); setLoaded(result.scan, result.mask, result.demonstration) })
-  const jumpToPrediction = () => run('Locating predicted region…', async () => { const result = await getForegroundCentre(sessionId); setPosition(result.voxel) })
+  const jumpUnavailableReason = !mask ? 'Load a prediction mask first.' : mask.kind !== 'prediction' ? 'Available only when the active mask is an imported AI prediction.' : !mask.labels.length ? 'The active prediction has no foreground labels.' : ''
+  const jumpDisabledReason = jumpUnavailableReason || (busy ? 'Wait for the current local operation to finish.' : '')
+  const jumpToPrediction = async () => {
+    if (jumpUnavailableReason || busy) return
+    setBusy('Locating predicted region…'); setError(''); setJumpFeedback(null)
+    try {
+      const result = await getForegroundCentre(sessionId)
+      setPosition(result.voxel)
+      setJumpFeedback({ kind: 'success', message: `Centred all views on predicted foreground voxel [${result.voxel.join(', ')}].` })
+      requestAnimationFrame(() => viewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    } catch (cause) {
+      const detail = cause instanceof Error ? cause.message : 'Unexpected local API error'
+      const message = `Could not locate predicted foreground: ${detail} Reload the verified demonstration or import a compatible non-empty prediction mask.`
+      setError(message); setJumpFeedback({ kind: 'error', message })
+    } finally { setBusy('') }
+  }
   const reset = () => scan && setLoaded(scan, mask, demonstration)
-  const clear = () => run('Clearing temporary files…', async () => { await clearSession(sessionId); const next = await createSession(); setSessionId(next.session_id); setScan(null); setMask(null); setDemonstration(null); setVisible([]) })
+  const clear = () => run('Clearing temporary files…', async () => { await clearSession(sessionId); const next = await createSession(); setSessionId(next.session_id); setScan(null); setMask(null); setDemonstration(null); setJumpFeedback(null); setVisible([]) })
 
   const urls = useMemo(() => {
     if (!scan) return null
@@ -95,10 +113,11 @@ export default function App() {
             <label>Zoom <output>{zoom.toFixed(1)}×</output><input type="range" min="1" max="2" step="0.1" value={zoom} onChange={e => setZoom(Number(e.target.value))}/></label>
             <button className="text-button" onClick={reset}><RotateCcw size={14}/>Reset view</button>
             <div className="panel-heading compact"><div><span>02</span><h2>Mask</h2></div><Layers3 size={18}/></div>
-            {mask && <><div className="active-mask"><span>Active mask provenance</span><div className={`provenance ${mask.kind}`}>{mask.kind === 'reference' ? 'UPLOADED REFERENCE MASK' : mask.kind === 'annotation' ? 'USER ANNOTATION' : 'AI PREDICTION · IMPORTED'}</div><b>{mask.name}</b></div>{mask.kind === 'prediction' && <><p className="prediction-note">Generated outside this local viewer. This is not an expert reference mask or a live model connection.</p><button className="button jump-button" onClick={jumpToPrediction}><MapPin size={15}/>Jump to predicted region</button></>}<label>2D overlay opacity <output>{Math.round(opacity*100)}%</output><input type="range" min="0" max="1" step="0.05" value={opacity} onChange={e => setOpacity(Number(e.target.value))}/></label><div className="legend">{mask.measurements.map(m => <label key={m.label}><input type="checkbox" checked={visible.includes(m.label)} onChange={() => setVisible(v => v.includes(m.label) ? v.filter(x => x !== m.label) : [...v, m.label])}/><i style={{background: COLORS[(m.label - 1)%COLORS.length]}}/><span>{mask.label_names[String(m.label)] ?? `Region ${m.label}`}<small>{m.volume_ml.toFixed(2)} mL</small></span></label>)}</div></>}
+            {mask && <><div className="active-mask"><span>Active mask provenance</span><div className={`provenance ${mask.kind}`}>{mask.kind === 'reference' ? 'UPLOADED REFERENCE MASK' : mask.kind === 'annotation' ? 'USER ANNOTATION' : 'AI PREDICTION · IMPORTED'}</div><b>{mask.name}</b></div>{mask.kind === 'prediction' && <p className="prediction-note">Generated outside this local viewer. This is not an expert reference mask or a live model connection.</p>}<button type="button" className="button jump-button" onClick={jumpToPrediction} disabled={Boolean(jumpDisabledReason)} aria-describedby={jumpDisabledReason ? 'jump-availability' : undefined}><MapPin size={15}/>Jump to predicted region</button>{jumpDisabledReason && <p id="jump-availability" className="control-explanation">{jumpDisabledReason}</p>}<label>2D overlay opacity <output>{Math.round(opacity*100)}%</output><input type="range" min="0" max="1" step="0.05" value={opacity} onChange={e => setOpacity(Number(e.target.value))}/></label><div className="legend">{mask.measurements.map(m => <label key={m.label}><input type="checkbox" checked={visible.includes(m.label)} onChange={() => setVisible(v => v.includes(m.label) ? v.filter(x => x !== m.label) : [...v, m.label])}/><i style={{background: COLORS[(m.label - 1)%COLORS.length]}}/><span>{mask.label_names[String(m.label)] ?? `Region ${m.label}`}<small>{m.volume_ml.toFixed(2)} mL</small></span></label>)}</div></>}
             <div className="upload-source"><span>Source for next mask upload</span><select value={maskKind} onChange={e => setMaskKind(e.target.value as 'reference'|'annotation'|'prediction')} aria-label="Source for next mask upload"><option value="reference">Expert reference mask</option><option value="annotation">User annotation</option><option value="prediction">Imported AI prediction</option></select><UploadButton label={mask ? 'Replace active mask' : 'Upload corresponding mask'} accept=".nii,.nii.gz" onFile={handleMask}/></div>
           </aside>
-          <div className="viewer-column" style={{'--zoom': zoom} as CSSProperties}>
+          <div className="viewer-column" ref={viewsRef} style={{'--zoom': zoom, scrollMarginTop: 116} as CSSProperties}>
+            {jumpFeedback && <div className={`jump-feedback ${jumpFeedback.kind}`} role={jumpFeedback.kind === 'error' ? 'alert' : 'status'} aria-live="polite"><MapPin size={16}/><span>{jumpFeedback.message}</span></div>}
             <div className="slice-grid">{(['axial','coronal','sagittal'] as Plane[]).map(plane => <SliceView key={plane} plane={plane} title={plane[0].toUpperCase()+plane.slice(1)} url={urls![plane]} index={position[planeAxis[plane]]} max={scan.metadata.shape[planeAxis[plane]]} labels={scan.orientation_labels[plane]} aspect={aspect(plane)} crosshair={crosshair(plane)} onCrosshair={(x,y) => moveCrosshair(plane,x,y)} onSlice={value => setPosition(v => v.map((n,i) => i === planeAxis[plane] ? value : n) as [number,number,number])}/>)}</div>
             <section className="panel three-panel"><header><div><span className="eyebrow">VERIFIED MASK GEOMETRY</span><h2>Interactive 3D surfaces</h2></div><small>Drag to rotate · Scroll to zoom</small></header><MeshViewer sessionId={sessionId} labels={mask?.labels ?? []} labelNames={mask?.label_names ?? {}}/></section>
           </div>
