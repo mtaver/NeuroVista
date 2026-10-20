@@ -96,7 +96,6 @@ def main() -> None:
                   "licence": provenance["model"]["license"]},
         "run": {"gpu": provenance["hardware"]["gpu"], "inference_seconds": provenance["inference"]["elapsed_seconds"],
                 "peak_gpu_memory_gib": provenance["inference"]["peak_gpu_memory_gib"]},
-        "notice": "This demonstration displays a previously generated AI result. It does not automatically analyse new scans.",
     }
     (args.output / "demo-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     meshes = [mesh_for(np.rint(mask).astype(np.uint8), label, spacing) for label in labels]

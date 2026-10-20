@@ -6,8 +6,6 @@ The public site is a static, browser-only presentation of the preserved BRATS_45
 
 Public URL: https://mtaver.github.io/NeuroVista/
 
-> This demonstration displays a previously generated AI result. It does not automatically analyse new scans.
-
 Working online features:
 
 - linked axial, coronal and sagittal T1c slice navigation
