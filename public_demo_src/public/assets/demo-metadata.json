@@ -1,0 +1,65 @@
+{
+  "case": "BRATS_457",
+  "shape": [
+    240,
+    240,
+    155
+  ],
+  "spacing_mm": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "orientation": [
+    "R",
+    "A",
+    "S"
+  ],
+  "display_window_source_percentiles": [
+    0.0,
+    155.0
+  ],
+  "scan_sha256": "7ee0a2b489be16bc750e3f35edcb3ef65a060f457d050c0f138ebd6900f7bd42",
+  "prediction_sha256": "23b25b0af158127d090d226ff4a0a8d5192f0421fc01a04b1b09c9b1f9b90e07",
+  "labels": [
+    {
+      "label": 1,
+      "name": "Non-enhancing tumour-core region",
+      "color": "#24dec7",
+      "voxels": 488,
+      "volume_ml": 0.488
+    },
+    {
+      "label": 2,
+      "name": "Whole-tumour-only region",
+      "color": "#ff6699",
+      "voxels": 80472,
+      "volume_ml": 80.47200000000001
+    },
+    {
+      "label": 4,
+      "name": "Enhancing tumour",
+      "color": "#8777ff",
+      "voxels": 2980,
+      "volume_ml": 2.98
+    }
+  ],
+  "dice": {
+    "whole_tumour": 0.8966404828473794,
+    "tumour_core": 0.8346947868706371,
+    "enhancing_tumour": 0.8318812520167796
+  },
+  "independent_validation": false,
+  "limitation": "MSD Task01 derives from BraTS 2016/2017 while the model reports BraTS 2018 training; subject overlap has not been ruled out.",
+  "model": {
+    "name": "brats_mri_segmentation",
+    "version": "0.5.4",
+    "licence": "Apache-2.0"
+  },
+  "run": {
+    "gpu": "Tesla T4",
+    "inference_seconds": 1.4887334850000116,
+    "peak_gpu_memory_gib": 2.760735034942627
+  },
+  "notice": "This demonstration displays a previously generated AI result. It does not automatically analyse new scans."
+}

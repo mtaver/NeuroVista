@@ -2,6 +2,13 @@
 
 Last updated: 2026-10-20
 
+## Public static demonstration
+
+- A separate browser-only GitHub Pages build presents the permitted CC BY-SA 4.0 MSD BRATS_457-derived display assets, precomputed AI overlay, region volumes, interactive 3D surfaces and recorded single-case Dice comparison.
+- Public uploads and hosted inference are disabled. The site contains no service credential, local path, `.tmp` file, original NIfTI, or Python-backend dependency.
+- The required notice states: **“This demonstration displays a previously generated AI result. It does not automatically analyse new scans.”**
+- Dataset attribution, transformation notice, ShareAlike terms and possible training-subject-overlap limitation are displayed publicly.
+
 ## Stage 1 — implemented
 
 - Local FastAPI and React/TypeScript application structure

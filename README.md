@@ -2,6 +2,12 @@
 
 NeuroVista is a local-first research and education workspace for inspecting 3D NIfTI brain MRI volumes and compatible segmentation masks. It is **not a medical device and not for clinical diagnosis**.
 
+## Public browser demonstration
+
+The repository also contains a separate static demonstration for GitHub Pages. It displays a transformed, attributed MSD BRATS_457 T1c sample and its previously generated MONAI prediction entirely in the browser. It does not expose local files or paths, accept uploads, call the FastAPI backend, or run inference. See [PUBLIC_DEMO.md](PUBLIC_DEMO.md).
+
+**This demonstration displays a previously generated AI result. It does not automatically analyse new scans.**
+
 ## What works now
 
 - `.nii` and `.nii.gz` scan upload with compressed and decompressed size limits

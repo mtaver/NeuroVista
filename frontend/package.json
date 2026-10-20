@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
+    "build:public": "vite build --config vite.public.config.ts",
     "test": "vitest run"
   },
   "dependencies": {
