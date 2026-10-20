@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Canvas } from '@react-three/fiber'
 import { Bounds, GizmoHelper, GizmoViewport, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
-import { decompressAsync, isCompressed } from 'nifti-reader-js'
+import { decompress, isCompressed } from 'nifti-reader-js'
 import { affinePoint, assertCompatible, readNiftiFile, validateMask, type Affine, type VolumeData } from './nifti'
 import './styles.css'
 
@@ -23,7 +23,7 @@ async function ungzip(url: string) {
   if (!response.ok) throw new Error(`Could not load ${url}`)
   const bytes = await response.arrayBuffer()
   if (!isCompressed(bytes)) throw new Error(`Sample asset ${url.split('/').pop()} is not valid gzip data.`)
-  return new Uint8Array(await decompressAsync(bytes))
+  return new Uint8Array(decompress(bytes))
 }
 
 function displayVoxels(volume: VolumeData) {
