@@ -52,6 +52,27 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 Open two PowerShell terminals in the repository root.
 
+### Windows double-click launcher
+
+After completing setup once, double-click `Start-NeuroVista.cmd` in the project folder. The launcher:
+
+- uses the existing `.venv` and `frontend/node_modules` environments
+- reuses healthy services already listening on `127.0.0.1:8000` and `127.0.0.1:5173`
+- starts only missing services and waits up to 60 seconds for their HTTP readiness checks
+- opens `http://127.0.0.1:5173` only after both services are ready
+- leaves the backend and frontend running after the launcher window closes
+- writes timestamped process logs under the Git-ignored `.tmp/runtime-logs` directory
+
+If an environment is missing, a service exits, readiness times out, or one of the localhost ports is occupied by an unhealthy process, the launcher shows an actionable error and pauses so it can be read. It does not modify firewall settings or expose either service beyond localhost.
+
+For troubleshooting without opening a browser:
+
+```powershell
+.\Start-NeuroVista.ps1 -NoBrowser
+```
+
+The manual commands remain available below.
+
 Backend:
 
 ```powershell
